@@ -10,6 +10,7 @@ import org.json.simple.parser.ParseException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Database {
@@ -123,4 +124,29 @@ public class Database {
         }
     }
 
+    /**
+     * Transform an SQL result set into an array of JSONObjects representing each record.
+     * @param rs The result set to transform
+     * @return The resulting array of JSONObjects
+     */
+    public static JSONObject[] extractResultSet(ResultSet rs) {
+        try {
+            ResultSetMetaData meta = rs.getMetaData();
+            ArrayList<JSONObject> result = new ArrayList<>();
+
+            while (rs.next()) {
+                JSONObject row = new JSONObject();
+                for (int i = 0; i < meta.getColumnCount(); i++) {
+                    row.put(meta.getColumnName(i), rs.getObject(meta.getColumnName(i)));
+                }
+
+                result.add(row);
+            }
+
+            return result.toArray(new JSONObject[0]);
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
