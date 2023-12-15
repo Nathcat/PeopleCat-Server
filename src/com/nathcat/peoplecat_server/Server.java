@@ -5,6 +5,7 @@ import org.json.simple.parser.ParseException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -68,6 +69,7 @@ public class Server {
 
         log("Starting up...");
 
+        // This is a small worker thread which cleans the handler array by removing inactive handlers.
         Thread cleanerThread = new Thread(() -> {
             while (true) {
                 for (int i = 0; i < handlers.size(); i++) {
@@ -87,12 +89,22 @@ public class Server {
         cleanerThread.setDaemon(true);
         cleanerThread.start();
 
-        ServerSocket ss = new ServerSocket(1234);
+        ServerSocket ss = new ServerSocket(port);
 
         log("Ready.");
 
         while (true) {
+            // Accept a connection and pass it to a new handler thread
             Socket client = ss.accept();
+
+            // Check if the server is allowed to accept any more connections
+            if (handlers.size() >= threadCount) {
+                OutputStream os = client.getOutputStream();
+                os.write(Packet.createError("Server full", "The server cannot currently accept any more connections.").getBytes());
+                os.flush();
+                client.close();
+                continue;
+            }
 
             ClientHandler handler = new ClientHandler(this, client);
             handler.start();
