@@ -15,7 +15,15 @@ import java.util.Arrays;
 
 
 public class Server {
-    public record Options(int port, int threadCount) {}
+    public static class Options {
+        public int port;
+        public int threadCount;
+
+        public Options(int port, int threadCount) {
+            this.port = port;
+            this.threadCount = threadCount;
+        }
+    }
 
     public static final String version = "0.0.0-Development";
 
@@ -107,7 +115,6 @@ public class Server {
             }
 
             ClientHandler handler = new ClientHandler(this, client);
-            handler.start();
             handlers.add(handler);
         }
     }

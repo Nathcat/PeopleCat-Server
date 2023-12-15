@@ -17,16 +17,24 @@ import java.util.Date;
  *
  * @author Nathan Baines
  */
-public class ClientHandler extends Thread {
-    public interface IRequestHandler { Packet[] handler(ClientHandler handler, Packet[] packets); }
+public class ClientHandler extends ConnectionHandler {
+    private final Server server;
+    public boolean active = true;
 
-    /**
-     * An array of handler methods which handle each of the request types, which correspond to an index in this array.
-     */
-    public static final IRequestHandler[] requestHandlers = new IRequestHandler[] {
-            (ClientHandler handler, Packet[] packets) -> null,
-            (ClientHandler handler, Packet[] packets) -> new Packet[] {Packet.createPing()},  // Ping handler responds with a ping as well.
-            (ClientHandler handler, Packet[] packets) -> {  // Handles authentication requests
+    public ClientHandler(Server server, Socket client) throws IOException {
+        super(client, new IPacketHandler() {
+            @Override
+            public Packet[] error(ConnectionHandler handler, Packet[] packets) {
+                return null;
+            }
+
+            @Override
+            public Packet[] ping(ConnectionHandler handler, Packet[] packets) {
+                return new Packet[] { Packet.createPing() };
+            }
+
+            @Override
+            public Packet[] authenticate(ConnectionHandler handler, Packet[] packets) {
                 // Check that there is only one packet in the request
                 if (packets.length > 1) {
                     return new Packet[] {Packet.createError("Invalid data type", "Auth request does not accept multi-packet arrays.")};
@@ -46,7 +54,7 @@ public class ClientHandler extends Thread {
                 // Request all the users with the given username from the database
                 ResultSet rs;
                 try {
-                    rs = handler.server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("username") + "\";");
+                    rs = ((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("username") + "\";");
 
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
@@ -75,9 +83,10 @@ public class ClientHandler extends Thread {
                 else {
                     return new Packet[] {Packet.createError("Auth failed", "Incorrect username or password")};
                 }
-            },
+            }
 
-            (ClientHandler handler, Packet[] packets) -> {  // Handles create new user packets
+            @Override
+            public Packet[] createNewUser(ConnectionHandler handler, Packet[] packets) {
                 if (packets.length > 1) {
                     return new Packet[] {Packet.createError("Invalid data type", "New user request does not accept multi-packet arrays.")};
                 }
@@ -98,19 +107,19 @@ public class ClientHandler extends Thread {
 
                 try {
                     JSONObject[] existingUsers = Database.extractResultSet(
-                            handler.server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("username") + "\";")
+                            ((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("username") + "\";")
                     );
 
                     if (existingUsers.length != 0) {
                         return new Packet[] {Packet.createError("Failed to create new user", "A user with this username already exists")};
                     }
 
-                    handler.server.db.Update(
+                    ((ClientHandler) handler).server.db.Update(
                             "INSERT INTO `users` (`username`, `display_name`, `password`, `time_created`) VALUES (\"" + user.get("username") + "\", \"" + user.get("display_name") + "\", \"" + user.get("password") + "\", " + new Date().getTime() + ")"
                     );
 
                     existingUsers = Database.extractResultSet(
-                            handler.server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("username") + "\";")
+                            ((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("username") + "\";")
                     );
 
                     if (existingUsers.length != 1) {
@@ -125,80 +134,55 @@ public class ClientHandler extends Thread {
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
-            },
+            }
 
-            (ClientHandler handler, Packet[] packets) -> null  // Handles close packets
-    };
+            @Override
+            public Packet[] close(ConnectionHandler handler, Packet[] packets) {
+                return null;
+            }
+        });
 
-    private final Server server;
-    private final Socket client;
-    private OutputStream outStream;
-    private InputStream inStream;
-    public boolean active = true;
-
-    public ClientHandler(Server server, Socket client) throws IOException {
         this.server = server;
-        this.client = client;
-        outStream = client.getOutputStream();
-        inStream = client.getInputStream();
 
         log("Got connection.");
-    }
-
-    public void log(String message) {
-        System.out.println("Handler " + threadId() + ": " + message);
     }
 
     @Override
     public void run() {
         log("Thread started.");
 
-        try {
-            while (true) {
-                // Get the packet sequence from the input stream
-                ArrayList<Packet> packets = new ArrayList<>();
-                Packet p;
-                while (!(p = new Packet(inStream)).isFinal) {
-                    log("Got packet:\n" + p);
-
-                    if (p.type == Packet.TYPE_CLOSE) { break; }
-
-                    packets.add(p);
-
-                    if (p.isFinal) break;
-                }
+        while (true) {
+            // Get the packet sequence from the input stream
+            ArrayList<Packet> packets = new ArrayList<>();
+            Packet p;
+            while (!(p = getPacket()).isFinal) {
+                log("Got packet:\n" + p);
 
                 if (p.type == Packet.TYPE_CLOSE) { break; }
 
                 packets.add(p);
-
-
-                Packet[] packetSequence = packets.toArray(new Packet[0]);
-
-                // Use a response handler to determine the response from the packet sequence
-                Packet[] responseSequence = requestHandlers[packetSequence[0].type].handler(this, packetSequence);
-
-                // Send the response sequence to the client through the output stream
-                for (Packet packet : responseSequence) {
-                    outStream.write(packet.getBytes());
-                }
-                outStream.flush();
             }
 
-            log("Closing thread.");
-            client.close();
-            active = false;
-            interrupt();
+            if (p.type == Packet.TYPE_CLOSE) { break; }
 
-        } catch (IOException e) {
-            log("Error occurred (" + e.getMessage() + "), closing thread.");
-            active = false;
-            interrupt();
+            packets.add(p);
+
+
+            Packet[] packetSequence = packets.toArray(new Packet[0]);
+
+            // Use a response handler to determine the response from the packet sequence
+            Packet[] responseSequence = packetHandler.handle(this, packetSequence);
+            if (responseSequence == null) continue;
+
+            // Send the response sequence to the client through the output stream
+            for (Packet packet : responseSequence) {
+                writePacket(packet);
+            }
         }
-    }
 
-    @Override
-    public String toString() {
-        return "Handler " + threadId();
+        log("Closing thread.");
+        close();
+        active = false;
+        interrupt();
     }
 }
