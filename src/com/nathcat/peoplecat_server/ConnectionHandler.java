@@ -10,6 +10,7 @@ public class ConnectionHandler extends Thread {
     private OutputStream outStream;
     private InputStream inStream;
     public IPacketHandler packetHandler;
+    public boolean authenticated = false;
 
     public ConnectionHandler(Socket client, IPacketHandler packetHandler) throws IOException {
         this.client = client;

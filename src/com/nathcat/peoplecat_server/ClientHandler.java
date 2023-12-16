@@ -74,6 +74,7 @@ public class ClientHandler extends ConnectionHandler {
                 JSONObject dbUser = records[0];
 
                 if (dbUser.get("username").equals(user.get("username")) && dbUser.get("password").equals(user.get("password"))) {
+                    handler.authenticated = true;
                     return new Packet[] {Packet.createPacket(
                             Packet.TYPE_AUTHENTICATE,
                             true,
@@ -81,6 +82,7 @@ public class ClientHandler extends ConnectionHandler {
                     )};
                 }
                 else {
+                    handler.authenticated = false;
                     return new Packet[] {Packet.createError("Auth failed", "Incorrect username or password")};
                 }
             }
