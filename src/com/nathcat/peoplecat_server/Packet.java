@@ -93,6 +93,40 @@ public class Packet {
      * <p>None</p>
      */
     public static final int TYPE_CLOSE = 4;
+    /**
+     * <h3>Purpose</h3>
+     * <p>Request user data from the database. Passwords will be removed from the response.</p>
+     * <h3>Payload format</h3>
+     * <pre>
+     *      {
+     *          "ID": Int,
+     *          "username": String,
+     *          "display_name": String,
+     *      }
+     * </pre>
+     * <p>Only one parameter needs to be specified, if multiple are given the following rules are applied to determine which one is used:</p>
+     * <ol>
+     *     <li>If ID is specified, search for the user with this ID.</li>
+     *     <li>If ID is <i>not</i> specified, but username is specified, search for all users with a username which begins with the string given.</li>
+     *     <li>If neither ID nor username is specified, then display_name <i>must</i> be specified, so search for all users with a display_name which begins with the string given.</li>
+     * </ol>
+     *
+     * <h3>Response format</h3>
+     * <p>If there is at least one user which meets the criteria, each packet in the sequence has the following format.</p>
+     * <pre>
+     *     {
+     *         "ID": Int,
+     *         "username": String,
+     *         "display_name": String,
+     *         "password": String,
+     *         "time_created": Long,
+     *         "pfp_path": String,
+     *         "cover_pic_path": String
+     *     }
+     * </pre>
+     * <p>If there are no users which match, a packet with no payload is sent.</p>
+     */
+    public static final int TYPE_GET_USER = 5;
 
     /**
      * The type of request specified by the packet

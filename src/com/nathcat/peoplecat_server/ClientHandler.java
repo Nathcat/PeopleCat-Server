@@ -142,6 +142,60 @@ public class ClientHandler extends ConnectionHandler {
             public Packet[] close(ConnectionHandler handler, Packet[] packets) {
                 return null;
             }
+
+            @Override
+            public Packet[] getUser(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get user request does not accept multi-packet arrays.")};
+
+                // Get the request data
+                JSONObject request = packets[0].getData();
+                JSONObject[] users;
+
+                // Request the data from the SQL server
+                try {
+                    if (request.containsKey("ID")) {
+                        users = Database.extractResultSet(((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE ID = " + request.get("ID") + ";"));
+
+                    } else if (request.containsKey("username")) {
+                        users = Database.extractResultSet(((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + request.get("username") + "%\";"));
+
+                    } else if (request.containsKey("display_name")) {
+                        users = Database.extractResultSet(((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `display_name` LIKE \"" + request.get("display_name") + "%\";"));
+
+                    } else {
+                        return new Packet[]{Packet.createError("Incorrect data provided", "You must provide at least one of the following fields, ID, username, or display_name")};
+                    }
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+
+                // In case no users are returned
+                if (users.length == 0) {
+                    return new Packet[] {
+                            Packet.createPacket(Packet.TYPE_GET_USER, true, new JSONObject())
+                    };
+                }
+
+                // Create the response packet sequence
+                Packet[] response = new Packet[users.length];
+                for (int i = 0; i < users.length-1; i++) {
+                    users[i].remove("password");
+                    response[i] = Packet.createPacket(
+                            Packet.TYPE_GET_USER,
+                            false,
+                            users[i]
+                    );
+                }
+
+                response[response.length-1] = Packet.createPacket(
+                        Packet.TYPE_GET_USER,
+                        true,
+                        users[users.length-1]
+                );
+
+                return response;
+            }
         });
 
         this.server = server;
@@ -165,6 +219,8 @@ public class ClientHandler extends ConnectionHandler {
                 packets.add(p);
             }
 
+            log("Got packet:\n" + p);
+
             if (p.type == Packet.TYPE_CLOSE) { break; }
 
             packets.add(p);
@@ -178,6 +234,7 @@ public class ClientHandler extends ConnectionHandler {
 
             // Send the response sequence to the client through the output stream
             for (Packet packet : responseSequence) {
+                log("Writing packet: \n" + packet + " -> " + packet.getData().toJSONString());
                 writePacket(packet);
             }
         }

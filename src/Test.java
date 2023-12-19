@@ -4,6 +4,7 @@ import com.nathcat.peoplecat_server.Packet;
 import org.json.simple.JSONObject;
 
 import java.io.*;
+import java.math.BigInteger;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,6 +41,15 @@ public class Test {
                         System.out.println(p + " -> " + p.getData().toJSONString());
                     }
 
+                    JSONObject userRequestData = new JSONObject();
+                    userRequestData.put("display_name", "Nathcat");
+
+                    handler.writePacket(Packet.createPacket(
+                            Packet.TYPE_GET_USER,
+                            true,
+                            userRequestData
+                    ));
+
                     return null;
                 }
 
@@ -64,38 +74,53 @@ public class Test {
 
                     return null;
                 }
+
+                @Override
+                public Packet[] getUser(ConnectionHandler handler, Packet[] packets) {
+                    handler.log("Got user packets:");
+                    for (Packet p : packets) {
+                        System.out.println(p + " -> " + p.getData().toJSONString());
+                    }
+
+                    return null;
+                }
             });
         }
 
         @Override
         public void run() {
-            JSONObject data = new JSONObject();
-            data.put("username", "nathcat6654");
-            data.put("password", "hello1234");
-            data.put("display_name", "Nathcat");
+            JSONObject authData = new JSONObject();
+            authData.put("username", "nathcat6654");
+            authData.put("password", "hello1234");
 
             writePacket(Packet.createPacket(
-                    Packet.TYPE_CREATE_NEW_USER,
+                    Packet.TYPE_AUTHENTICATE,
                     true,
-                    data
+                    authData
             ));
 
-            ArrayList<Packet> packets = new ArrayList<>();
-            Packet p;
-            while (!(p = getPacket()).isFinal) {
-                if (p.type == Packet.TYPE_CLOSE) { break; }
+            while (true) {
+                ArrayList<Packet> packets = new ArrayList<>();
+                Packet p;
+                while (!(p = getPacket()).isFinal) {
+                    if (p.type == Packet.TYPE_CLOSE) break;
+
+                    packets.add(p);
+                }
+
+                if (p.type == Packet.TYPE_CLOSE) break;
 
                 packets.add(p);
+
+                packetHandler.handle(this, packets.toArray(new Packet[0]));
             }
-
-            packets.add(p);
-
-            packetHandler.handle(this, packets.toArray(new Packet[0]));
         }
     }
     public static void main(String[] args) throws IOException {
         Socket s = new Socket("localhost", 1234);
         Test t = new Test(s);
+
+
 
         while (true) {}
     }

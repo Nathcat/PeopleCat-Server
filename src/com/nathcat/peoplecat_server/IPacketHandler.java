@@ -42,6 +42,13 @@ public interface IPacketHandler {
      * @return Response packet sequence
      */
     Packet[] close(ConnectionHandler handler, Packet[] packets);
+    /**
+     * Get a user from the database
+     * @param handler The ConnectionHandler handling the connection
+     * @param packets The packet sequence
+     * @return Response packet sequence
+     */
+    Packet[] getUser(ConnectionHandler handler, Packet[] packets);
 
     /**
      * Handle a packet sequence by determining which handler method to pass it to. Uses the type of the first packet
@@ -57,6 +64,7 @@ public interface IPacketHandler {
             case Packet.TYPE_AUTHENTICATE -> authenticate(handler, packets);
             case Packet.TYPE_CREATE_NEW_USER -> createNewUser(handler, packets);
             case Packet.TYPE_CLOSE -> close(handler, packets);
+            case Packet.TYPE_GET_USER -> getUser(handler, packets);
 
             default -> throw new IllegalStateException("Unexpected value: " + packets[0].type);
         };
