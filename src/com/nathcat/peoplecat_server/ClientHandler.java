@@ -207,6 +207,8 @@ public class ClientHandler extends ConnectionHandler {
     public void run() {
         log("Thread started.");
 
+        this.setup();
+
         while (true) {
             // Get the packet sequence from the input stream
             ArrayList<Packet> packets = new ArrayList<>();

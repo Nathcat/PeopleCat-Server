@@ -11,6 +11,7 @@ public class ConnectionHandler extends Thread {
     private InputStream inStream;
     public IPacketHandler packetHandler;
     public boolean authenticated = false;
+    public boolean isWebsocket = false;
 
     public ConnectionHandler(Socket client, IPacketHandler packetHandler) throws IOException {
         this.client = client;
@@ -32,12 +33,29 @@ public class ConnectionHandler extends Thread {
     }
 
     /**
+     * Perform basic setup of connection between the server and the client. This is effectively the handshake process.
+     */
+    public void setup() {
+        try {
+            if (WebSocketAdapter.detectWebSocket(client)) WebSocketAdapter.upgradeSocket(client);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
      * Read the next packet from the stream. If one is not currently available, then wait for the next one.
      * @return The packet just read from the stream
      */
     public Packet getPacket() {
         try {
-            return new Packet(inStream);
+            if (!isWebsocket) {
+                return new Packet(inStream);
+            }
+            else {
+                return WebSocketAdapter.readPacket(inStream);
+            }
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -50,7 +68,7 @@ public class ConnectionHandler extends Thread {
      */
     public void writePacket(Packet p) {
         try {
-            outStream.write(p.getBytes());
+            outStream.write(isWebsocket ? WebSocketAdapter.createMessageBuffer(p) : p.getBytes());
             outStream.flush();
 
         } catch (IOException e) {

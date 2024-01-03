@@ -1,3 +1,4 @@
+import com.google.gson.Gson;
 import com.nathcat.peoplecat_server.ConnectionHandler;
 import com.nathcat.peoplecat_server.IPacketHandler;
 import com.nathcat.peoplecat_server.Packet;
@@ -117,12 +118,18 @@ public class Test {
         }
     }
     public static void main(String[] args) throws IOException {
-        Socket s = new Socket("localhost", 1234);
+        /*Socket s = new Socket("localhost", 1234);
         Test t = new Test(s);
 
 
 
-        while (true) {}
+        while (true) {}*/
+
+        Packet p = Packet.createError("Hello", "World");
+        JSONObject payload = p.getData();
+        payload.put("type", p.type);
+        payload.put("isFinal", p.isFinal);
+        System.out.println(payload.toJSONString());
     }
 
     public TestHandler handler;
