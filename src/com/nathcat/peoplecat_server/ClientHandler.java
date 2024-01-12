@@ -207,37 +207,45 @@ public class ClientHandler extends ConnectionHandler {
     public void run() {
         log("Thread started.");
 
-        while (true) {
-            // Get the packet sequence from the input stream
-            ArrayList<Packet> packets = new ArrayList<>();
-            Packet p;
-            while (!(p = getPacket()).isFinal) {
+        this.setup();
+
+        try {
+            while (true) {
+                // Get the packet sequence from the input stream
+                ArrayList<Packet> packets = new ArrayList<>();
+                Packet p;
+                while (!(p = getPacket()).isFinal) {
+                    log("Got packet:\n" + p);
+
+                    if (p.type == Packet.TYPE_CLOSE) {
+                        break;
+                    }
+
+                    packets.add(p);
+                }
+
                 log("Got packet:\n" + p);
 
-                if (p.type == Packet.TYPE_CLOSE) { break; }
+                if (p.type == Packet.TYPE_CLOSE) {
+                    break;
+                }
 
                 packets.add(p);
+
+
+                Packet[] packetSequence = packets.toArray(new Packet[0]);
+
+                // Use a response handler to determine the response from the packet sequence
+                Packet[] responseSequence = packetHandler.handle(this, packetSequence);
+                if (responseSequence == null) continue;
+
+                // Send the response sequence to the client through the output stream
+                for (Packet packet : responseSequence) {
+                    log("Writing packet: \n" + packet + " -> " + packet.getData().toJSONString());
+                    writePacket(packet);
+                }
             }
-
-            log("Got packet:\n" + p);
-
-            if (p.type == Packet.TYPE_CLOSE) { break; }
-
-            packets.add(p);
-
-
-            Packet[] packetSequence = packets.toArray(new Packet[0]);
-
-            // Use a response handler to determine the response from the packet sequence
-            Packet[] responseSequence = packetHandler.handle(this, packetSequence);
-            if (responseSequence == null) continue;
-
-            // Send the response sequence to the client through the output stream
-            for (Packet packet : responseSequence) {
-                log("Writing packet: \n" + packet + " -> " + packet.getData().toJSONString());
-                writePacket(packet);
-            }
-        }
+        } catch (Exception ignored) {}
 
         log("Closing thread.");
         close();

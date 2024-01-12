@@ -7,9 +7,18 @@ import org.json.simple.parser.ParseException;
 import java.io.*;
 
 /**
- * Class for creating data which can be sent / received by the server / client.
+ * <p>Class for creating data which can be sent / received by the server / client.</p>
  *
  * @author Nathan Baines
+ *
+ * <h3>Specification</h3>
+ * <table>
+ *     <tr><th>Byte count</th><th>Data type</th><th>Purpose</th></tr>
+ *     <tr><td>4</td><td>Integer</td><td>Packet type</td></tr>
+ *     <tr><td>1</td><td>Boolean</td><td>If true, this is the last packet in the sequence, if false, there are more packets to come</td></tr>
+ *     <tr><td>4</td><td>Integer</td><td>Payload length (in bytes)</td></tr>
+ *     <tr><td>Defined by payload length</td><td>String</td><td>JSON string containing the request body</td></tr>
+ * </table>
  */
 public class Packet {
     /**
@@ -141,6 +150,8 @@ public class Packet {
      */
     public byte[] payload;
 
+    public Packet() {}
+
     public Packet(InputStream inStream) throws IOException {
         DataInputStream input = new DataInputStream(inStream);
         type = input.readInt();
@@ -172,6 +183,22 @@ public class Packet {
         } catch (ParseException e) {
             return null;
         }
+    }
+
+    /**
+     * Create a packet from a JSONObject, used in websocket communication.
+     * @param data The JSON data from the websocket
+     * @return The equivalent packet
+     */
+    public static Packet fromData(JSONObject data) {
+        Packet p = new Packet();
+        p.type = ((Long) data.get("type")).intValue();
+        p.isFinal = (boolean) data.get("isFinal");
+        data.remove("type");
+        data.remove("isFinal");
+        p.payload = data.toJSONString().getBytes();
+
+        return p;
     }
 
     /**

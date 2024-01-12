@@ -12,5 +12,6 @@
     <orderEntry type="library" name="RSACryptoSystem" level="project" />
     <orderEntry type="library" name="ServerLib" level="project" />
     <orderEntry type="library" name="json-simple-1.1.1" level="project" />
+    <orderEntry type="library" name="google.code.gson" level="project" />
   </component>
 </module>

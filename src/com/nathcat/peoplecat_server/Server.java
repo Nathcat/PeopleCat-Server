@@ -119,6 +119,14 @@ public class Server {
         }
     }
 
+    public void removeThread(int threadID) {
+        for (ClientHandler handler : handlers) {
+            if (handler.threadId() == threadID) {
+                handlers.remove(handler);
+            }
+        }
+    }
+
     public static void log(Object message) {
         System.out.println("Server: " + message);
     }
