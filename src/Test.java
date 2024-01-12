@@ -7,6 +7,8 @@ import org.json.simple.JSONObject;
 import java.io.*;
 import java.math.BigInteger;
 import java.net.Socket;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -90,15 +92,41 @@ public class Test {
 
         @Override
         public void run() {
+            try {
+                outStream.write("Not websock\n".getBytes());
+                outStream.flush();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
             JSONObject authData = new JSONObject();
+
+            try {
+                MessageDigest sha = MessageDigest.getInstance("SHA-256");
+                byte[] digest = sha.digest("hello1234".getBytes());
+                StringBuilder hexString = new StringBuilder();
+                for (byte b : digest) {
+                    hexString.append(String.format("%02x", b));
+                }
+
+                authData.put("password", hexString.toString());
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException(e);
+            }
+
             authData.put("username", "nathcat6654");
-            authData.put("password", "hello1234");
+            assert authData.containsKey("password");
+            authData.put("display_name", "Nathan");
+
+            System.out.println("Created packet");
 
             writePacket(Packet.createPacket(
-                    Packet.TYPE_AUTHENTICATE,
+                    Packet.TYPE_CREATE_NEW_USER,
                     true,
                     authData
             ));
+
+            System.out.println("Written packet");
 
             while (true) {
                 ArrayList<Packet> packets = new ArrayList<>();
@@ -118,18 +146,10 @@ public class Test {
         }
     }
     public static void main(String[] args) throws IOException {
-        /*Socket s = new Socket("localhost", 1234);
+        Socket s = new Socket("localhost", 1234);
         Test t = new Test(s);
 
-
-
-        while (true) {}*/
-
-        Packet p = Packet.createError("Hello", "World");
-        JSONObject payload = p.getData();
-        payload.put("type", p.type);
-        payload.put("isFinal", p.isFinal);
-        System.out.println(payload.toJSONString());
+        while (true) {}
     }
 
     public TestHandler handler;

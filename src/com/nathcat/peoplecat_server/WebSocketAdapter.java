@@ -26,6 +26,47 @@ import java.util.regex.Pattern;
  */
 public class WebSocketAdapter {
     /**
+     * <p>Wrapper class to allow easier access to 2 dimensional byte arrays, externally this class allows you to treat
+     * such a data structure as a single array, referenced with long indexes. Internally it interprets these
+     * long indexes as int indexes.</p>
+     */
+    public static class ByteHeap {
+        private byte[][] heap;
+        public final long length;
+
+        public ByteHeap(byte[][] heap) {
+            this.heap = heap;
+
+            long l = 0;
+            for (int i = 0; i < heap.length; i++) {
+                l += heap[i].length;
+            }
+
+            this.length = l;
+        }
+
+        /**
+         * Get a byte from the byte heap.
+         * @param i Index of the byte
+         * @return The byte at the given index
+         * @throws ArrayIndexOutOfBoundsException Thrown if the index exceeds the size of the heap
+         */
+        public byte get(long i) throws ArrayIndexOutOfBoundsException {
+            return heap[(int) (i >> 32)][(int) i];
+        }
+
+        /**
+         * Set the byte at an index in the heap to a given byte.
+         * @param i The index to set
+         * @param b The byte value to set at the index
+         * @throws ArrayIndexOutOfBoundsException Thrown if the index exceeds the size of the heap
+         */
+        public void set(long i, byte b) throws ArrayIndexOutOfBoundsException {
+            heap[(int) (i >> 32)][(int) i] = b;
+        }
+    }
+
+    /**
      * Websocket message fragment class. Follows the RFC 6455 specification:
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455">RFC 6455</a>
      */
@@ -44,8 +85,9 @@ public class WebSocketAdapter {
         /**
          * The payload buffer
          */
-        public final byte[] payload;
+        public final ByteHeap payload;
         public byte[] key;
+
 
         /**
          * Interpret a message buffer.
@@ -63,32 +105,45 @@ public class WebSocketAdapter {
             opcode = (header & 0xF);
 
             byte payload_len = stream.readNBytes(1)[0];
-            int length_descriptor = payload_len & 0x7F;
-            int[] length = new int[1];
+            byte length_descriptor = (byte) (payload_len & 0x7F);
+            long length = 0;
             boolean payloadMasked = (payload_len & 0x80) == 0x80;
 
             if (length_descriptor >= 0 && length_descriptor <= 125) {
-                length = new int[] {length_descriptor};
+                length = length_descriptor;
             }
             else if (length_descriptor == 126) {
-                length[0] |= stream.readNBytes(1)[0];
-                length[0] |= ((int) stream.readNBytes(1)[0] << 8);
+                byte[] buffer = stream.readNBytes(2);
+
+                length |= ((0xFF & ((long) buffer[0])) << 8);
+                length |= (0xFF & ((long) buffer[1]));
             }
             else if (length_descriptor == 127){
-                for (int i = 0; i < 8; i++) {
-                    length[i / 4] |= ((int) stream.readNBytes(1)[0] << (i * 8));
+                byte[] buffer = stream.readNBytes(8);
+                for (int i = 7; i >= 0; i--) {
+                    length |= ((0xFF & ((long) buffer[i])) << (i * 8));
                 }
             }
             else {
                 throw new RuntimeException("Invalid length descriptor: " + length_descriptor);
             }
 
+
             if (payloadMasked) {
                 key = stream.readNBytes(4);
-                payload = DecodeBuffer(stream, key);
+                payload = DecodeBuffer(stream, key, length);
             }
             else {
-                payload = stream.readAllBytes();
+                int[] l = {(int) length};
+                if ((length >> 32) > 0) {
+                    l = new int[] {(int) length, (int) (length >> 32)};
+                }
+                byte[][] buffers = new byte[l.length][];
+                for (int i = 0; i < buffers.length; i++) {
+                    buffers[i] = stream.readNBytes(l[i]);
+                }
+
+                payload = new ByteHeap(buffers);
             }
         }
 
@@ -99,13 +154,24 @@ public class WebSocketAdapter {
          * @return Decoded payload buffer
          * @throws IOException
          */
-        private static byte[] DecodeBuffer(InputStream stream, byte[] key) throws IOException {
-            byte[] buffer = stream.readAllBytes();
-            for (int i = 0; i < buffer.length; i++) {
-                buffer[i] = (byte) (buffer[i] ^ key[i % 4]);
+        private static ByteHeap DecodeBuffer(InputStream stream, byte[] key, long l) throws IOException {
+            int[] length = {(int) l};
+            if ((l >> 32) > 0) {
+                length = new int[] {(int) l, (int) (l >> 32)};
             }
 
-            return buffer;
+            byte[][] buffers = new byte[length.length][];
+
+            for (int i = 0; i < buffers.length; i++) {
+                byte[] buffer = stream.readNBytes(length[i]);
+                for (int j = 0; j < buffer.length; j++) {
+                    buffer[j] = (byte) (buffer[j] ^ key[j % 4]);
+                }
+
+                buffers[i] = buffer;
+            }
+
+            return new ByteHeap(buffers);
         }
 
         /**
@@ -115,11 +181,11 @@ public class WebSocketAdapter {
          */
         public Object GetData() {
             if (opcode == 1) {
-                char[] c_buffer = new char[payload.length];
-                for (int i = 0; i < payload.length; i++) {
-                    c_buffer[i] = (char) payload[i];
+                StringBuilder sb = new StringBuilder();
+                for (long i = 0; i < payload.length; i++) {
+                    sb.append((char) payload.get(i));
                 }
-                return String.valueOf(c_buffer);
+                return sb.toString();
             }
 
             return null;
@@ -142,16 +208,17 @@ public class WebSocketAdapter {
 
             byte length_desc = 0;
             byte[] extra_length = new byte[0];
+
             if (payload.length >= 0 && payload.length <= 125) {
                 length_desc = (byte) payload.length;
             } else if (payload.length <= 0xFFFF) {
                 length_desc = 126;
-                extra_length = new byte[] {(byte) (payload.length & 0xFF), (byte) (payload.length & 0xFF00)};
+                extra_length = new byte[] {(byte) ((payload.length & 0xFF00) >> 8), (byte) (payload.length & 0xFF)};
             }
             else {
                 length_desc = 127;
                 extra_length = new byte[8];
-                for (int i = 0; i < 8; i++) {
+                for (int i = 7; i >= 0; i--) {
                     extra_length[i] = (byte) (payload.length & (0xFF << (i * 8)));
                 }
             }
@@ -195,7 +262,10 @@ public class WebSocketAdapter {
         InputStream in = socket.getInputStream();
         Scanner s = new Scanner(in, "UTF-8");
         String data = s.useDelimiter("\\r\\n\\r\\n").next();
+        if (data.contentEquals("Not websock")) return false;
         Matcher get = Pattern.compile("^GET").matcher(data);
+
+        upgradeSocket(socket, data);
 
         return get.find();
     }
@@ -205,12 +275,8 @@ public class WebSocketAdapter {
      * @param socket The socket to upgrade
      * @throws IOException Thrown when an I/O operation fails
      */
-    public static void upgradeSocket(Socket socket) throws IOException {
-        InputStream in = socket.getInputStream();
+    private static void upgradeSocket(Socket socket, String data) throws IOException {
         OutputStream out = socket.getOutputStream();
-
-        Scanner s = new Scanner(in, "UTF-8");
-        String data = s.useDelimiter("\\r\\n\\r\\n").next();
 
         Matcher match = Pattern.compile("Sec-WebSocket-Key: (.*)").matcher(data);
         match.find();
@@ -241,6 +307,10 @@ public class WebSocketAdapter {
 
         SecureRandom rng = new SecureRandom();
         return Fragment.FromData(packetData.toJSONString(), rng.generateSeed(4));
+    }
+
+    public static String byteBinStr(byte b) {
+        return String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
     }
 
     /**

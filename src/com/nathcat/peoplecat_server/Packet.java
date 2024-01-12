@@ -192,7 +192,7 @@ public class Packet {
      */
     public static Packet fromData(JSONObject data) {
         Packet p = new Packet();
-        p.type = (int) data.get("type");
+        p.type = ((Long) data.get("type")).intValue();
         p.isFinal = (boolean) data.get("isFinal");
         data.remove("type");
         data.remove("isFinal");

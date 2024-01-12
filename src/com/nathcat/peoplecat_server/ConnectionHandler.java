@@ -7,8 +7,8 @@ import java.net.Socket;
 
 public class ConnectionHandler extends Thread {
     private final Socket client;
-    private OutputStream outStream;
-    private InputStream inStream;
+    public OutputStream outStream;
+    public InputStream inStream;
     public IPacketHandler packetHandler;
     public boolean authenticated = false;
     public boolean isWebsocket = false;
@@ -37,7 +37,7 @@ public class ConnectionHandler extends Thread {
      */
     public void setup() {
         try {
-            if (WebSocketAdapter.detectWebSocket(client)) WebSocketAdapter.upgradeSocket(client);
+            isWebsocket = WebSocketAdapter.detectWebSocket(client);
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -83,5 +83,10 @@ public class ConnectionHandler extends Thread {
         try {
             client.close();
         } catch (IOException ignored) {}
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj.getClass() == ConnectionHandler.class && ((ConnectionHandler) obj).threadId() == this.threadId();
     }
 }
