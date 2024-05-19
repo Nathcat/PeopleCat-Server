@@ -51,6 +51,14 @@ public interface IPacketHandler {
     Packet[] getUser(ConnectionHandler handler, Packet[] packets);
 
     /**
+     * Get the messages from a chat
+     * @param handler The connection handler handling the connection
+     * @param packets The packet sequence
+     * @return Response packet sequence
+     */
+    Packet[] getMessageQueue(ConnectionHandler handler, Packet[] packets);
+
+    /**
      * Handle a packet sequence by determining which handler method to pass it to. Uses the type of the first packet
      * in the sequence to determine the appropriate handler method.
      * @param handler The ConnectionHandler handling the connection
@@ -65,6 +73,7 @@ public interface IPacketHandler {
             case Packet.TYPE_CREATE_NEW_USER -> createNewUser(handler, packets);
             case Packet.TYPE_CLOSE -> close(handler, packets);
             case Packet.TYPE_GET_USER -> getUser(handler, packets);
+            case Packet.TYPE_GET_MESSAGE_QUEUE -> getMessageQueue(handler, packets);
 
             default -> throw new IllegalStateException("Unexpected value: " + packets[0].type);
         };

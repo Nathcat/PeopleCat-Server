@@ -1,15 +1,19 @@
 package com.nathcat.peoplecat_server;
 
+import com.nathcat.messagecat_database.MessageQueue;
+import com.nathcat.messagecat_database_entities.Message;
 import com.nathcat.peoplecat_database.Database;
 import org.json.simple.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.net.Socket;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 
 /**
@@ -54,7 +58,7 @@ public class ClientHandler extends ConnectionHandler {
                 // Request all the users with the given username from the database
                 ResultSet rs;
                 try {
-                    rs = ((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("username") + "\";");
+                    rs = ((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("Username") + "\";");
 
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
@@ -72,8 +76,9 @@ public class ClientHandler extends ConnectionHandler {
 
                 // Check that the database user has the same password as the one provided by the client.
                 JSONObject dbUser = records[0];
+                System.out.println(dbUser);
 
-                if (dbUser.get("username").equals(user.get("username")) && dbUser.get("password").equals(user.get("password"))) {
+                if (dbUser.get("Username").equals(user.get("Username")) && dbUser.get("Password").equals(user.get("Password"))) {
                     handler.authenticated = true;
                     return new Packet[] {Packet.createPacket(
                             Packet.TYPE_AUTHENTICATE,
@@ -155,7 +160,7 @@ public class ClientHandler extends ConnectionHandler {
                 // Request the data from the SQL server
                 try {
                     if (request.containsKey("ID")) {
-                        users = Database.extractResultSet(((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE ID = " + request.get("ID") + ";"));
+                        users = Database.extractResultSet(((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE UserID = " + request.get("ID") + ";"));
 
                     } else if (request.containsKey("username")) {
                         users = Database.extractResultSet(((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + request.get("username") + "%\";"));
@@ -195,6 +200,54 @@ public class ClientHandler extends ConnectionHandler {
                 );
 
                 return response;
+            }
+
+            @Override
+            public Packet[] getMessageQueue(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+
+                JSONObject request = packets[0].getData();
+                if (request.get("ChatID") == null) {
+                    return new Packet[] {Packet.createError("Incorrect data provided", "You must provide the ChatID.")};
+                }
+
+                MessageQueue queue = server.db.messageStore.GetMessageQueue(Math.toIntExact((long) request.get("ChatID")));  // Because for some fucking reason this is a long
+
+                if (queue == null) {
+                    return new Packet[] {Packet.createError("Chat does not exist", "The message queue for the specified chat does not exist in the database.")};
+                }
+
+                ArrayList<Packet> response = new ArrayList<>();
+                Message msg;
+                int i = 0;
+                while ((msg = queue.Get(i)) != null) {  // I really hate my old code ;_;
+                    JSONObject msgData = new JSONObject();
+
+                    for (Field field : Message.class.getFields()) {
+                        try {
+                            msgData.put(field.getName(), field.get(msg));
+                        } catch (IllegalAccessException ignored) {}
+                    }
+
+                    response.add(
+                            Packet.createPacket(
+                                    Packet.TYPE_GET_MESSAGE_QUEUE,
+                                    false,
+                                    msgData
+                            )
+                    );
+
+                    i++;
+                }
+
+                if (response.isEmpty()) {
+                    return new Packet[] {Packet.createError("No messages", "There are no messages in this chat.")};
+                }
+
+                response.getLast().isFinal = true;
+
+                return response.toArray(new Packet[0]);
             }
         });
 
@@ -245,7 +298,7 @@ public class ClientHandler extends ConnectionHandler {
                     writePacket(packet);
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) { log("\033[91;3m" + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m"); }
 
         log("Closing thread.");
         close();

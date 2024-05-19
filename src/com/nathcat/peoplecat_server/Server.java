@@ -33,7 +33,7 @@ public class Server {
     public ArrayList<ClientHandler> handlers = new ArrayList<>();
 
 
-    public Server(Options options) throws NoSuchFieldException, IllegalAccessException, SQLException, FileNotFoundException, ParseException {
+    public Server(Options options) throws NoSuchFieldException, IllegalAccessException, SQLException, IOException, ParseException {
         // Set the options provided in the record
         for (Field field : Options.class.getFields()) {
             Server.class.getField(field.getName()).set(this, field.get(options));
@@ -129,5 +129,14 @@ public class Server {
 
     public static void log(Object message) {
         System.out.println("Server: " + message);
+    }
+
+    public static String stringifyStackTrace(StackTraceElement[] st) {
+        StringBuilder sb = new StringBuilder();
+        for (StackTraceElement e : st) {
+            sb.append("\t").append(e.toString()).append("\n");
+        }
+
+        return sb.toString();
     }
 }

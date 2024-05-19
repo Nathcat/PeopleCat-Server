@@ -9,6 +9,7 @@ import org.json.simple.parser.ParseException;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -33,9 +34,9 @@ public class Database {
     /**
      * The message store on this database
      */
-    public MessageStore messageStore;
+    public MessageStore messageStore = new MessageStore();
 
-    public Database() throws FileNotFoundException, ParseException, SQLException {
+    public Database() throws IOException, ParseException, SQLException {
         config = getConfig();
         StartMySQLConnection();
     }

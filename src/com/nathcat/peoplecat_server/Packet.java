@@ -138,6 +138,31 @@ public class Packet {
     public static final int TYPE_GET_USER = 5;
 
     /**
+     * <h3>Purpose</h3>
+     * <p>
+     *     Request a list of messages in a given chat. If this chat is encrypted then the messages received will be in
+     *     their encrypted format.
+     * </p>
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "ChatID": Int
+     *     }
+     * </pre>
+     * <h3>Response format</h3>
+     * <p>Multiple packets will be sent, each containing one message in the following format, under TYPE_GET_MESSAGE_QUEUE:</p>
+     * <pre>
+     *     {
+     *         "ChatID": Int,
+     *         "Content" String,
+     *         "SenderID": Int,
+     *         "TimeSent": Long
+     *     }
+     * </pre>
+     */
+    public static final int TYPE_GET_MESSAGE_QUEUE = 6;
+
+    /**
      * The type of request specified by the packet
      */
     public int type;
