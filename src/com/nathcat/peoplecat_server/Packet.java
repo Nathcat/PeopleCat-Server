@@ -163,6 +163,26 @@ public class Packet {
     public static final int TYPE_GET_MESSAGE_QUEUE = 6;
 
     /**
+     * <h3>Purpose</h3>
+     * <p>
+     *     Send a message into a chat.
+     * </p>
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "ChatID": Int,
+     *         "Content": String,
+     *         "TimeSent": Long
+     *     }
+     * </pre>
+     * <h3>Response format</h3>
+     * <p>
+     *     The server will issue a ping packet in response.
+     * </p>
+     */
+    public static final int TYPE_SEND_MESSAGE = 7;
+
+    /**
      * The type of request specified by the packet
      */
     public int type;

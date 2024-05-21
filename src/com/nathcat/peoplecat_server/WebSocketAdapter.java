@@ -302,6 +302,7 @@ public class WebSocketAdapter {
      */
     public static byte[] createMessageBuffer(Packet packet) {
         JSONObject packetData = packet.getData();
+        if (packetData == null) packetData = new JSONObject();
         packetData.put("type", packet.type);
         packetData.put("isFinal", packet.isFinal ? 1 : 0);
 

@@ -2,6 +2,7 @@ package com.nathcat.peoplecat_server;
 
 import com.nathcat.messagecat_database.MessageQueue;
 import com.nathcat.messagecat_database_entities.Message;
+import com.nathcat.messagecat_database_entities.User;
 import com.nathcat.peoplecat_database.Database;
 import org.json.simple.JSONObject;
 
@@ -80,6 +81,7 @@ public class ClientHandler extends ConnectionHandler {
 
                 if (dbUser.get("Username").equals(user.get("Username")) && dbUser.get("Password").equals(user.get("Password"))) {
                     handler.authenticated = true;
+                    handler.user = dbUser;
                     return new Packet[] {Packet.createPacket(
                             Packet.TYPE_AUTHENTICATE,
                             true,
@@ -249,6 +251,26 @@ public class ClientHandler extends ConnectionHandler {
 
                 return response.toArray(new Packet[0]);
             }
+
+            @Override
+            public Packet[] sendMessage(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+
+                JSONObject request = packets[0].getData();
+                System.out.println(handler.user.toJSONString());
+                System.out.println(request.toJSONString());
+                Message msg = new Message((int) handler.user.get("UserID"), Math.toIntExact((long) request.get("ChatID")), (long) request.get("TimeSent"), request.get("Content"));
+                server.db.messageStore.GetMessageQueue(msg.ChatID).Push(msg);
+                try {
+                    server.db.messageStore.WriteToFile();
+                }
+                catch (IOException e) {
+                    return new Packet[] {Packet.createError("Server error", "An error occurred when writing the message store to the disk.")};
+                }
+
+                return new Packet[] {Packet.createPing()};
+            }
         });
 
         this.server = server;
@@ -294,7 +316,8 @@ public class ClientHandler extends ConnectionHandler {
 
                 // Send the response sequence to the client through the output stream
                 for (Packet packet : responseSequence) {
-                    log("Writing packet: \n" + packet + " -> " + packet.getData().toJSONString());
+                    if (packet.type != Packet.TYPE_PING) log("Writing packet: \n" + packet + " -> " + packet.getData().toJSONString());
+                    else log("Pinging client.");
                     writePacket(packet);
                 }
             }

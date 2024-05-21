@@ -1,5 +1,8 @@
 package com.nathcat.peoplecat_server;
 
+import com.nathcat.messagecat_database_entities.User;
+import org.json.simple.JSONObject;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -11,6 +14,7 @@ public class ConnectionHandler extends Thread {
     public InputStream inStream;
     public IPacketHandler packetHandler;
     public boolean authenticated = false;
+    public JSONObject user;
     public boolean isWebsocket = false;
 
     public ConnectionHandler(Socket client, IPacketHandler packetHandler) throws IOException {
