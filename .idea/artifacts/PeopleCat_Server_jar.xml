@@ -1,0 +1,14 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="PeopleCat-Server:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/PeopleCat_Server_jar</output-path>
+    <root id="archive" name="PeopleCat-Server.jar">
+      <element id="module-output" name="PeopleCat-Server" />
+      <element id="extracted-dir" path="/media/nathcat/Data/Projects/Java/libs/json-simple-1.1.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../MessageCatServer/out/artifacts/ServerLib/ServerLib.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="/media/nathcat/Data/Projects/Java/libs/mysql-connector-j-8.0.33.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="/media/nathcat/Data/Projects/Java/libs/sqlite-jdbc-3.36.0.3.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/google/code/gson/gson/2.10.1/gson-2.10.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../RSACryptoSystem/out/artifacts/RSACryptoSystem/RSACryptoSystem.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
