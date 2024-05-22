@@ -203,7 +203,8 @@ public class WebSocketAdapter {
             char[] c_buffer = data.toCharArray();
             byte[] payload = new byte[c_buffer.length];
             for (int i = 0; i < c_buffer.length; i++) {
-                payload[i] = (byte) (c_buffer[i] ^ key[i % 4]);
+                if (key != null) payload[i] = (byte) (c_buffer[i] ^ key[i % 4]);
+                else payload[i] = (byte) c_buffer[i];
             }
 
             byte length_desc = 0;
@@ -223,14 +224,14 @@ public class WebSocketAdapter {
                 }
             }
 
-            length_desc |= 0x80;
+            if (key != null) length_desc |= 0x80;
 
-            byte[] buffer = new byte[6 + extra_length.length + payload.length];
+            byte[] buffer = new byte[2 + (key == null ? 0 : 4) + extra_length.length + payload.length];
             buffer[0] = header;
             buffer[1] = length_desc;
             System.arraycopy(extra_length, 0, buffer, 2, extra_length.length);
-            System.arraycopy(key, 0, buffer, 2 + extra_length.length, 4);
-            System.arraycopy(payload, 0, buffer, 6 + extra_length.length, payload.length);
+            if (key != null) System.arraycopy(key, 0, buffer, 2 + extra_length.length, 4);
+            System.arraycopy(payload, 0, buffer, 2 + (key == null ? 0 : 4) + extra_length.length, payload.length);
 
             return buffer;
         }
@@ -307,7 +308,7 @@ public class WebSocketAdapter {
         packetData.put("isFinal", packet.isFinal ? 1 : 0);
 
         SecureRandom rng = new SecureRandom();
-        return Fragment.FromData(packetData.toJSONString(), rng.generateSeed(4));
+        return Fragment.FromData(packetData.toJSONString(), null/*rng.generateSeed(4)*/);
     }
 
     public static String byteBinStr(byte b) {
@@ -324,7 +325,15 @@ public class WebSocketAdapter {
         try {
             Fragment frag = new Fragment(in);
             String data = (String) frag.GetData();
-            JSONObject packetData = (JSONObject) new JSONParser().parse(data);
+            JSONObject packetData;
+            if (data != null) {
+                packetData = (JSONObject) new JSONParser().parse(data);
+            }
+            else {
+                packetData = new JSONObject();
+                packetData.put("type", (long) Packet.TYPE_PING);
+                packetData.put("isFinal", true);
+            }
             Packet p = Packet.fromData(packetData);
             return p;
 
