@@ -16,6 +16,7 @@ public class ConnectionHandler extends Thread {
     public boolean authenticated = false;
     public JSONObject user;
     public boolean isWebsocket = false;
+    public boolean active = false;
 
     public ConnectionHandler(Socket client, IPacketHandler packetHandler) throws IOException {
         this.client = client;

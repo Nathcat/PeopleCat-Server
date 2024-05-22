@@ -24,7 +24,6 @@ import java.util.Date;
  */
 public class ClientHandler extends ConnectionHandler {
     private final Server server;
-    public boolean active = true;
 
     public ClientHandler(Server server, Socket client) throws IOException {
         super(client, new IPacketHandler() {
@@ -280,6 +279,8 @@ public class ClientHandler extends ConnectionHandler {
                     }
 
                     for (ConnectionHandler otherHandler : server.handlers) {
+                        if (!otherHandler.authenticated || !otherHandler.active) continue;
+
                         if ((int) otherHandler.user.get("UserID") == userID) {
                             otherHandler.writePacket(notifyPacket);
                         }
@@ -343,6 +344,7 @@ public class ClientHandler extends ConnectionHandler {
     @Override
     public void run() {
         log("Thread started.");
+        this.active = true;
 
         this.setup();
 
