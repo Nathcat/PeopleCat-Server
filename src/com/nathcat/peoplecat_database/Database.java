@@ -26,7 +26,8 @@ public class Database {
     /**
      * The friendship store on this database
      */
-    public FriendshipStore friendshipStore;
+    public DataStore<Integer, int[]> friendshipStore; // = new DataStore<>("Assets/Data/Friendships.bin");
+    public DataStore<Integer, int[]> chatMemberships = new DataStore<>("Assets/Data/ChatMemberships.bin");
     /**
      * The key store on this database
      */

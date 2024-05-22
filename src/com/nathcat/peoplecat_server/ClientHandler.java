@@ -258,8 +258,6 @@ public class ClientHandler extends ConnectionHandler {
                 if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
 
                 JSONObject request = packets[0].getData();
-                System.out.println(handler.user.toJSONString());
-                System.out.println(request.toJSONString());
                 Message msg = new Message((int) handler.user.get("UserID"), Math.toIntExact((long) request.get("ChatID")), (long) request.get("TimeSent"), request.get("Content"));
                 server.db.messageStore.GetMessageQueue(msg.ChatID).Push(msg);
                 try {
@@ -269,7 +267,71 @@ public class ClientHandler extends ConnectionHandler {
                     return new Packet[] {Packet.createError("Server error", "An error occurred when writing the message store to the disk.")};
                 }
 
+                // Notify other users about this message
+                int chatID = Math.toIntExact((long) request.get("ChatID"));
+                JSONObject notification = new JSONObject();
+                notification.put("title", "New message");
+                notification.put("message", "You have a new message from ");
+                notification.put("ChatID", chatID);
+                Packet notifyPacket = Packet.createPacket(Packet.TYPE_NOTIFICATION_MESSAGE, true, notification);
+                for (int userID : server.db.chatMemberships.get(chatID)) {
+                    if (userID == (int) handler.user.get("UserID")) {
+                        continue;
+                    }
+
+                    for (ConnectionHandler otherHandler : server.handlers) {
+                        if ((int) otherHandler.user.get("UserID") == userID) {
+                            otherHandler.writePacket(notifyPacket);
+                        }
+                    }
+                }
+
                 return new Packet[] {Packet.createPing()};
+            }
+
+            @Override
+            public Packet[] notifitcationMessage(ConnectionHandler handler, Packet[] packets) {
+                return new Packet[] {Packet.createError("Invalid packet type", "The server is not able to receive message notification packets.")};
+            }
+
+            @Override
+            public Packet[] joinChat(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+
+                JSONObject request = packets[0].getData();
+                JSONObject chat;
+                try {
+                    JSONObject[] results = Database.extractResultSet(server.db.Select("select * from chats where ChatID = " + request.get("ChatID") + ";"));
+
+                    if (results.length != 1) {
+                        return new Packet[] {Packet.createError("Database error", "Could not find the specified chat or multiple chats exist with this ID.")};
+                    }
+
+                    chat = results[0];
+                }
+                catch (Exception e) {
+                    return new Packet[] {Packet.createError("Server error", e.getMessage())};
+                }
+
+                if (!chat.get("JoinCode").equals(request.get("JoinCode"))) {
+                    return new Packet[] {Packet.createError("Invalid join code", "The given join code is incorrect.")};
+                }
+
+                int chatID = Math.toIntExact((long) request.get("ChatID"));
+                int[] members = server.db.chatMemberships.get(chatID);
+                for (int m : members) {
+                    if (m == (int) handler.user.get("UserID")) {
+                        return new Packet[] {Packet.createError("Already member", "You are already a member of this chat.")};
+                    }
+                }
+
+                int[] newMembers = new int[members.length + 1];
+                System.arraycopy(members, 0, newMembers, 0, members.length);
+                newMembers[members.length] = (int) handler.user.get("UserID");
+                server.db.chatMemberships.set(chatID, newMembers);
+
+                return new Packet[] {Packet.createPacket(Packet.TYPE_JOIN_CHAT, true, chat)};
             }
         });
 

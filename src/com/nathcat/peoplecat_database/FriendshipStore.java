@@ -3,6 +3,9 @@ package com.nathcat.peoplecat_database;
 import java.io.*;
 import java.util.HashMap;
 
+/**
+ * @deprecated
+ */
 public class FriendshipStore {
     /**
      * The content of the data file

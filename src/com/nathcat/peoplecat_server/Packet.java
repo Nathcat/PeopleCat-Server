@@ -183,6 +183,57 @@ public class Packet {
     public static final int TYPE_SEND_MESSAGE = 7;
 
     /**
+     * <h3>Purpose</h3>
+     * <p>
+     *     This is to be sent from the server to the connected client applications, it tells the client that they have
+     *     received a new message.
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "title": String,
+     *         "message": String,
+     *         "ChatID": Int
+     *     }
+     * </pre>
+     *
+     * <h3>Response format</h3>
+     * <p>The client should is not expected to reply to this packet.</p>
+     */
+    public static final int TYPE_NOTIFICATION_MESSAGE = 8;
+
+    /**
+     * <h3>Purpose</h3>
+     * <p>
+     *     This message indicates that a client wishes to join a chat.
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "ChatID": Int,
+     *         "JoinCode": String,
+     *     }
+     * </pre>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     The server will reply under the same packet type to indicate success, with the full information about the chat,
+     *     or will reply with an error packet to indicate failure.
+     * </p>
+     * <pre>
+     *     {
+     *         "ChatID": Int,
+     *         "Name": String,
+     *         "KeyID": Int,
+     *         "JoinCode": String
+     *     }
+     * </pre>
+     */
+    public static final int TYPE_JOIN_CHAT = 9;
+
+    /**
      * The type of request specified by the packet
      */
     public int type;
