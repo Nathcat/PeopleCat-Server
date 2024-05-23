@@ -272,7 +272,6 @@ public class Packet {
         for (byte b : payload) {
             sb.append((char) b);
         }
-        System.out.println("\"" + sb + "\"");
 
         try {
             return (JSONObject) new JSONParser().parse(sb.toString());
