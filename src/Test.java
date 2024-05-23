@@ -13,7 +13,7 @@ public class Test {
         Message msg;
         int i = 0;
         while ((msg = q.Get(i)) != null) {
-            System.out.println(msg);
+            System.out.println(msg); i++;
         }
     }
 }
