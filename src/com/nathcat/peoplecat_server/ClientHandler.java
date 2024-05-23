@@ -380,7 +380,7 @@ public class ClientHandler extends ConnectionHandler {
 
                 // Send the response sequence to the client through the output stream
                 for (Packet packet : responseSequence) {
-                    log(String.valueOf(packet.type));
+                    log(packet.toString());
                     if (packet.type != Packet.TYPE_PING) log("Writing packet: \n" + packet + " -> " + packet.getData().toJSONString());
                     else log("Pinging client.");
                     writePacket(packet);
