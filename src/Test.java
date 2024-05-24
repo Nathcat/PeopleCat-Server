@@ -7,8 +7,11 @@ import java.util.Date;
 
 public class Test {
     public static void main(String[] args) throws Exception {
-        MessageStore msgStore = new MessageStore();
+        /*MessageStore msgStore = new MessageStore();
         msgStore.AddMessageQueue(new MessageQueue(1));
-        msgStore.WriteToFile();
+        msgStore.WriteToFile();*/
+        DataStore<Integer, int[]> m = new DataStore<>("Assets/Data/ChatMemberships.bin");
+        m.set(1, new int[0]);
+        m.saveContent();
     }
 }

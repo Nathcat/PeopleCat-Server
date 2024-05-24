@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="MessageCat_ServerLib">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/libs/MessageCat_ServerLib.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
