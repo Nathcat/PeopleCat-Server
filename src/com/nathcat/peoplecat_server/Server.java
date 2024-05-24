@@ -25,7 +25,7 @@ public class Server {
         }
     }
 
-    public static final String version = "0.0.0-Development";
+    public static final String version = "1.0.0";
 
     public int port;
     public int threadCount;
@@ -72,7 +72,7 @@ public class Server {
         log("""
                 ----- PeopleCat Server -----
                 Version\s""" + version + """
-                Developed by Nathcat 2023
+                \nDeveloped by Nathcat 2024
                 """);
 
         log("Starting up...");
