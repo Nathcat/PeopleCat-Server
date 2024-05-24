@@ -3,12 +3,6 @@
     <output-path>$PROJECT_DIR$/out/artifacts/ServerLib</output-path>
     <root id="archive" name="ServerLib.jar">
       <element id="module-output" name="PeopleCat-Server" />
-      <element id="library" level="project" name="google.code.gson" />
-      <element id="library" level="project" name="sqlite-jdbc-3.36.0.3" />
-      <element id="library" level="project" name="mysql-connector-j-8.0.33" />
-      <element id="library" level="project" name="json-simple-1.1.1" />
-      <element id="library" level="project" name="RSACryptoSystem" />
-      <element id="library" level="project" name="ServerLib" />
     </root>
   </artifact>
 </component>

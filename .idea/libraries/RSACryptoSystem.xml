@@ -1,7 +1,7 @@
 <component name="libraryTable">
   <library name="RSACryptoSystem">
     <CLASSES>
-      <root url="jar://$PROJECT_DIR$/../RSACryptoSystem/out/artifacts/RSACryptoSystem/RSACryptoSystem.jar!/" />
+      <root url="jar://$PROJECT_DIR$/libs/RSACryptoSystem.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />
