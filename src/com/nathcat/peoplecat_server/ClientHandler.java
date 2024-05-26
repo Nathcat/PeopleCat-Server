@@ -194,6 +194,7 @@ public class ClientHandler extends ConnectionHandler {
                     );
                 }
 
+                users[users.length-1].remove("Password");
                 response[response.length-1] = Packet.createPacket(
                         Packet.TYPE_GET_USER,
                         true,
