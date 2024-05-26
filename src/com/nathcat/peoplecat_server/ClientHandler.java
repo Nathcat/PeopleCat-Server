@@ -49,8 +49,8 @@ public class ClientHandler extends ConnectionHandler {
 
                 // Assert that the packet data contains a username and password field
                 try {
-                    assert user.containsKey("username");
-                    assert user.containsKey("password");
+                    assert user.containsKey("Username");
+                    assert user.containsKey("Password");
                 } catch (AssertionError e) {
                     return new Packet[] {Packet.createError("Invalid JSON provided", "The data provided does not contain the correct data, an Auth request requires both the user's username and password to complete.")};
                 }
@@ -104,9 +104,9 @@ public class ClientHandler extends ConnectionHandler {
 
                 // Assert that the packet data contains the required data
                 try {
-                    assert user.containsKey("username");
-                    assert user.containsKey("password");
-                    assert user.containsKey("display_name");
+                    assert user.containsKey("Username");
+                    assert user.containsKey("Password");
+                    assert user.containsKey("DisplayName");
                 } catch (AssertionError e) {
                     return new Packet[] {Packet.createError("Invalid JSON provided", "The data provided does not contain the correct data, an Auth request requires both the user's username and password to complete.")};
                 }
@@ -115,7 +115,7 @@ public class ClientHandler extends ConnectionHandler {
 
                 try {
                     JSONObject[] existingUsers = Database.extractResultSet(
-                            ((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("username") + "\";")
+                            ((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("Username") + "\";")
                     );
 
                     if (existingUsers.length != 0) {
@@ -123,11 +123,11 @@ public class ClientHandler extends ConnectionHandler {
                     }
 
                     ((ClientHandler) handler).server.db.Update(
-                            "INSERT INTO `users` (`username`, `display_name`, `password`, `time_created`) VALUES (\"" + user.get("username") + "\", \"" + user.get("display_name") + "\", \"" + user.get("password") + "\", " + new Date().getTime() + ")"
+                            "INSERT INTO `users` (Username, DisplayName, Password, DateCreated) VALUES (\"" + user.get("Username") + "\", \"" + user.get("DisplayName") + "\", \"" + user.get("Password") + "\", \"" + new Date() + "\")"
                     );
 
                     existingUsers = Database.extractResultSet(
-                            ((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("username") + "\";")
+                            ((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("Username") + "\";")
                     );
 
                     if (existingUsers.length != 1) {
@@ -163,11 +163,11 @@ public class ClientHandler extends ConnectionHandler {
                     if (request.containsKey("ID")) {
                         users = Database.extractResultSet(((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE UserID = " + request.get("ID") + ";"));
 
-                    } else if (request.containsKey("username")) {
-                        users = Database.extractResultSet(((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + request.get("username") + "%\";"));
+                    } else if (request.containsKey("Username")) {
+                        users = Database.extractResultSet(((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + request.get("Username") + "%\";"));
 
-                    } else if (request.containsKey("display_name")) {
-                        users = Database.extractResultSet(((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `display_name` LIKE \"" + request.get("display_name") + "%\";"));
+                    } else if (request.containsKey("DisplayName")) {
+                        users = Database.extractResultSet(((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE DisplayName LIKE \"" + request.get("DisplayName") + "%\";"));
 
                     } else {
                         return new Packet[]{Packet.createError("Incorrect data provided", "You must provide at least one of the following fields, ID, username, or display_name")};
@@ -186,7 +186,7 @@ public class ClientHandler extends ConnectionHandler {
                 // Create the response packet sequence
                 Packet[] response = new Packet[users.length];
                 for (int i = 0; i < users.length-1; i++) {
-                    users[i].remove("password");
+                    users[i].remove("Password");
                     response[i] = Packet.createPacket(
                             Packet.TYPE_GET_USER,
                             false,
