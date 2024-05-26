@@ -49,8 +49,8 @@ public class ClientHandler extends ConnectionHandler {
 
                 // Assert that the packet data contains a username and password field
                 try {
-                    assert user.containsKey("username");
-                    assert user.containsKey("password");
+                    assert user.containsKey("Username");
+                    assert user.containsKey("Password");
                 } catch (AssertionError e) {
                     return new Packet[] {Packet.createError("Invalid JSON provided", "The data provided does not contain the correct data, an Auth request requires both the user's username and password to complete.")};
                 }
@@ -186,7 +186,7 @@ public class ClientHandler extends ConnectionHandler {
                 // Create the response packet sequence
                 Packet[] response = new Packet[users.length];
                 for (int i = 0; i < users.length-1; i++) {
-                    users[i].remove("password");
+                    users[i].remove("Password");
                     response[i] = Packet.createPacket(
                             Packet.TYPE_GET_USER,
                             false,
