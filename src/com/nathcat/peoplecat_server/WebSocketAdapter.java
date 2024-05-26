@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -261,7 +262,7 @@ public class WebSocketAdapter {
      */
     public static boolean detectWebSocket(Socket socket) throws IOException {
         InputStream in = socket.getInputStream();
-        Scanner s = new Scanner(in, "UTF-8");
+        Scanner s = new Scanner(in, StandardCharsets.UTF_8);
         String data = s.useDelimiter("\\r\\n\\r\\n").next();
         if (data.contentEquals("Not websock")) return false;
         Matcher get = Pattern.compile("^GET").matcher(data);

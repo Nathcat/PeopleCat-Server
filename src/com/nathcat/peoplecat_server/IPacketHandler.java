@@ -83,6 +83,14 @@ public interface IPacketHandler {
     Packet[] joinChat(ConnectionHandler handler, Packet[] packets);
 
     /**
+     * Change the authenticated user's profile picture
+     * @param handler The connection handler handling the connection
+     * @param packets The packet sequence
+     * @return The response packet sequence
+     */
+    Packet[] changeProfilePicture(ConnectionHandler handler, Packet[] packets);
+
+    /**
      * Handle a packet sequence by determining which handler method to pass it to. Uses the type of the first packet
      * in the sequence to determine the appropriate handler method.
      * @param handler The ConnectionHandler handling the connection
@@ -101,6 +109,7 @@ public interface IPacketHandler {
             case Packet.TYPE_SEND_MESSAGE -> sendMessage(handler, packets);
             case Packet.TYPE_NOTIFICATION_MESSAGE -> notifitcationMessage(handler, packets);
             case Packet.TYPE_JOIN_CHAT -> joinChat(handler, packets);
+            case Packet.TYPE_CHANGE_PFP_PATH -> changeProfilePicture(handler, packets);
 
             default -> throw new IllegalStateException("Unexpected value: " + packets[0].type);
         };

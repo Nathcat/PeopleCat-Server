@@ -334,6 +334,21 @@ public class ClientHandler extends ConnectionHandler {
 
                 return new Packet[] {Packet.createPacket(Packet.TYPE_JOIN_CHAT, true, chat)};
             }
+
+            @Override
+            public Packet[] changeProfilePicture(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "The change profile picture request does not accept multi-packet arrays.")};
+
+                JSONObject request = packets[0].getData();
+                try {
+                    server.db.Update("UPDATE users SET ProfilePicturePath = " + (request.get("NewPath") == null ? "NULL" : "\"" + request.get("NewPath") + "\"") + " WHERE UserID = " + handler.user.get("UserID"));
+                } catch (Exception e) {
+                    return new Packet[] {Packet.createError("Server error", e.getMessage())};
+                }
+
+                return new Packet[] {Packet.createPacket(Packet.TYPE_CHANGE_PFP_PATH, true, new JSONObject())};
+            }
         });
 
         this.server = server;

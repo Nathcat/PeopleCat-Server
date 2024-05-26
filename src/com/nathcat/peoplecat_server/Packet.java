@@ -234,6 +234,31 @@ public class Packet {
     public static final int TYPE_JOIN_CHAT = 9;
 
     /**
+     * <h3>Purpose</h3>
+     * <p>
+     *     This indicates a request to change the profile picture of the currently authenticated user.
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "NewPath": String
+     *     }
+     * </pre>
+     * <p>
+     *     Note that "NewPath" should be either a <i>full</i> url to the profile picture image, or the string "null",
+     *     indicating the default profile picture.
+     * </p>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     The server will either respond with a packet with an empty payload under the type TYPE_CHANGE_PFP_PATH
+     *     to indicate success, or it will reply with an error packet to indicate failure.
+     * </p>
+     */
+    public static final int TYPE_CHANGE_PFP_PATH = 10;
+
+    /**
      * The type of request specified by the packet
      */
     public int type;
