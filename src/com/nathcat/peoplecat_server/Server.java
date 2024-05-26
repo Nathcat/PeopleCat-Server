@@ -25,7 +25,7 @@ public class Server {
         }
     }
 
-    public static final String version = "1.0.1";
+    public static final String version = "1.1.0";
 
     public int port;
     public int threadCount;
