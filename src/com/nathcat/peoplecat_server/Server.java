@@ -25,7 +25,7 @@ public class Server {
         }
     }
 
-    public static final String version = "1.1.0";
+    public static final String version = "1.1.1";
 
     public int port;
     public int threadCount;
@@ -81,7 +81,7 @@ public class Server {
         Thread cleanerThread = new Thread(() -> {
             while (true) {
                 for (int i = 0; i < handlers.size(); i++) {
-                    if (!handlers.get(i).active) {
+                    if (!handlers.get(i).active || !handlers.get(i).isAlive() || handlers.get(i).isInterrupted()) {
                         handlers.remove(i);
                     }
                 }
