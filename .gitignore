@@ -26,3 +26,4 @@ replay_pid*
 
 # Program specific ignores
 Assets/*
+keys.jks
