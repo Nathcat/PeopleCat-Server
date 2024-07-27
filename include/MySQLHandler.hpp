@@ -1,4 +1,5 @@
-#ifndef PeopleCatDB::MySQLHandler
+#ifndef MYSQLHANDLER_HPP
+#define MYSQLHANDLER_HPP
 
 #include <mysql/jdbc.h>
 

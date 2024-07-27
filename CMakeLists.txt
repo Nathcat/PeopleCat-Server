@@ -21,4 +21,5 @@ target_link_libraries(PeopleCat-Server
 target_sources(PeopleCat-Server PUBLIC
     "${CMAKE_SOURCE_DIR}/src/MySQLHandler.cpp"
     "${CMAKE_SOURCE_DIR}/src/MessageQueue.cpp"
+    "${CMAKE_SOURCE_DIR}/src/Message.cpp"
 )

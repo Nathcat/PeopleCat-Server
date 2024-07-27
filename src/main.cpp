@@ -1,6 +1,5 @@
 #include <iostream>
-#include <MessageQueue.hpp>
-using namespace PeopleCatDB;
+#include <PeopleCatDB.hpp>
 
 int main() {
     

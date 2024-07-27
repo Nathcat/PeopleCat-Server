@@ -1,3 +1,6 @@
+#ifndef MESSAGE_QUEUE_HPP
+#define MESSAGE_QUEUE_HPP
+
 #include <Message.hpp>
 
 namespace PeopleCatDB {
@@ -54,3 +57,5 @@ namespace PeopleCatDB {
         void write(std::ofstream* f);
     };
 };
+
+#endif
