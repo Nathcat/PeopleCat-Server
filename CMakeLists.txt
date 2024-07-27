@@ -10,9 +10,15 @@ set_target_properties(PeopleCat-Server
 )
 
 include_directories(PeopleCat-Server 
+    "${CMAKE_SOURCE_DIR}/include"
     "${CMAKE_SOURCE_DIR}/libs/mysql-connector-c++-9.0.0-linux-glibc2.28-x86-64bit/include"
 )
 
 target_link_libraries(PeopleCat-Server
     "${CMAKE_SOURCE_DIR}/libs/mysql-connector-c++-9.0.0-linux-glibc2.28-x86-64bit/lib64/libmysqlcppconn.so"
+)
+
+target_sources(PeopleCat-Server PUBLIC
+    "${CMAKE_SOURCE_DIR}/src/MySQLHandler.cpp"
+    "${CMAKE_SOURCE_DIR}/src/MessageQueue.cpp"
 )
