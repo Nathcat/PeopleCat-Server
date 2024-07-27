@@ -28,6 +28,7 @@ namespace PeopleCatDB {
         MessageQueue& operator=(MessageQueue&& m);
 
         inline unsigned int getLength() {return length;}
+        inline unsigned int getChatID() {return chatID;}
 
         /**
          * @brief Push a new message to the queue

@@ -3,6 +3,7 @@
 using namespace PeopleCatDB;
 
 MessageQueue::MessageQueue(std::ifstream* f) {
+    chatID = 0; length = 0;
     f->read((char*) &chatID, sizeof(unsigned int));
     unsigned int l = 0;
     f->read((char*) &l, sizeof(unsigned int));
@@ -30,8 +31,8 @@ MessageQueue::MessageQueue(MessageQueue&& m) {
 }
 
 MessageQueue::~MessageQueue() {
-    delete root;
-    delete end;
+    root = nullptr;
+    end = nullptr;
 }
 
 MessageQueue& MessageQueue::operator=(MessageQueue& m) {
@@ -91,4 +92,6 @@ void MessageQueue::write(std::ofstream* f) {
         writeMessage(f, n->data);
         n = n->next;
     }
+
+    f->flush();
 }
