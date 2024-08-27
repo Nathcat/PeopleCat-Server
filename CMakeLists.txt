@@ -9,13 +9,23 @@ set_target_properties(PeopleCat-Server
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin"
 )
 
+if (WIN32)
+    set("MySQL_lib_src", "C:/Program Files/MySQL/Connector C++ 8.0")
+    set("MySQL_lib", "${MySQL_lib_src}/lib64/vs14/mysqlcppconn.lib")
+endif (WIN32)
+
+if (UNIX)
+    set("MySQL_lib_src", "${CMAKE_SOURCE_DIR}/libs/mysql-connector-c++-9.0.0-linux-glibc2.28-x86-64bit")
+    set("MySQL_lib", "${MySQL_lib_src}/lib64/libmysqlcppconn.so")
+endif (UNIX)
+
 include_directories(PeopleCat-Server 
     "${CMAKE_SOURCE_DIR}/include"
-    "${CMAKE_SOURCE_DIR}/libs/mysql-connector-c++-9.0.0-linux-glibc2.28-x86-64bit/include"
+    "${MySQL_lib_src}/include"
 )
 
 target_link_libraries(PeopleCat-Server
-    "${CMAKE_SOURCE_DIR}/libs/mysql-connector-c++-9.0.0-linux-glibc2.28-x86-64bit/lib64/libmysqlcppconn.so"
+    "${MySQL_lib}"
 )
 
 target_sources(PeopleCat-Server PUBLIC
