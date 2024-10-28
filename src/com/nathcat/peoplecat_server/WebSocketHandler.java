@@ -14,6 +14,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.X509ExtendedKeyManager;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.sql.SQLException;
 import java.util.HashMap;
 
@@ -61,6 +62,7 @@ public class WebSocketHandler extends WebSocketServer {
     }
 
     public WebSocketHandler(Server s) {
+        super(new InetSocketAddress(s.port));
         server = s;
         sockHandlerMap = new HashMap<>();
     }
