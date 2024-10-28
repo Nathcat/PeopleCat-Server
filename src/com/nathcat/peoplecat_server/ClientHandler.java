@@ -1,5 +1,7 @@
 package com.nathcat.peoplecat_server;
 
+import com.nathcat.AuthCat.AuthCat;
+import com.nathcat.AuthCat.Exceptions.InvalidResponse;
 import com.nathcat.messagecat_database.MessageQueue;
 import com.nathcat.messagecat_database_entities.Message;
 import com.nathcat.peoplecat_database.Database;
@@ -9,6 +11,7 @@ import org.json.simple.JSONObject;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.Socket;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -68,93 +71,37 @@ public class ClientHandler extends ConnectionHandler {
                     return new Packet[] {Packet.createError("Invalid JSON provided", "The data provided does not contain the correct data, an Auth request requires both the user's username and password to complete.")};
                 }
 
-                // Request all the users with the given username from the database
-                ResultSet rs;
-                try {
-                    rs = ((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("Username") + "\";");
+                // Attempt to log in with AuthCat
+                JSONObject authCatJSON = new JSONObject();
+                authCatJSON.put("username", user.get("Username"));
+                authCatJSON.put("password", user.get("Password"));
 
-                } catch (SQLException e) {
+
+                JSONObject authCatResponse;
+                try {
+                    authCatResponse = AuthCat.tryLogin(authCatJSON);
+                } catch (InvalidResponse | IOException | InterruptedException e) {
                     throw new RuntimeException(e);
                 }
 
-                JSONObject[] records = Database.extractResultSet(rs);
-
-                // There should only be one user with the given surname, or none
-                if (records.length > 1) {
-                    return new Packet[] {Packet.createError("Database error", "More than one user returned for the given username.")};
-                }
-                else if (records.length == 0) {
-                    return new Packet[] {Packet.createError("Auth failed", "Incorrect username or password")};
-                }
-
-                // Check that the database user has the same password as the one provided by the client.
-                JSONObject dbUser = records[0];
-                System.out.println(dbUser);
-
-                if (dbUser.get("Username").equals(user.get("Username")) && dbUser.get("Password").equals(user.get("Password"))) {
-                    handler.authenticated = true;
-                    handler.user = dbUser;
-                    return new Packet[] {Packet.createPacket(
-                            Packet.TYPE_AUTHENTICATE,
-                            true,
-                            dbUser
-                    )};
-                }
-                else {
+                // Check the response from the service
+                if (((String)authCatResponse.get("state")).contentEquals("fail")) {
                     handler.authenticated = false;
-                    return new Packet[] {Packet.createError("Auth failed", "Incorrect username or password")};
+                    return new Packet[] {Packet.createError("Auth failed", (String) authCatResponse.get("message"))};
                 }
+
+                handler.authenticated = true;
+                handler.user = (JSONObject) authCatResponse.get("user");
+                return new Packet[] {Packet.createPacket(
+                        Packet.TYPE_AUTHENTICATE,
+                        true,
+                        handler.user
+                )};
             }
 
             @Override
             public Packet[] createNewUser(ConnectionHandler handler, Packet[] packets) {
-                if (packets.length > 1) {
-                    return new Packet[] {Packet.createError("Invalid data type", "New user request does not accept multi-packet arrays.")};
-                }
-
-
-                JSONObject user = packets[0].getData();
-
-                // Assert that the packet data contains the required data
-                try {
-                    assert user.containsKey("Username");
-                    assert user.containsKey("Password");
-                    assert user.containsKey("DisplayName");
-                } catch (AssertionError e) {
-                    return new Packet[] {Packet.createError("Invalid JSON provided", "The data provided does not contain the correct data, an Auth request requires both the user's username and password to complete.")};
-                }
-
-                // Check that there are no users with the same username
-
-                try {
-                    JSONObject[] existingUsers = Database.extractResultSet(
-                            ((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("Username") + "\";")
-                    );
-
-                    if (existingUsers.length != 0) {
-                        return new Packet[] {Packet.createError("Failed to create new user", "A user with this username already exists")};
-                    }
-
-                    ((ClientHandler) handler).server.db.Update(
-                            "INSERT INTO `users` (Username, DisplayName, Password, DateCreated) VALUES (\"" + user.get("Username") + "\", \"" + user.get("DisplayName") + "\", \"" + user.get("Password") + "\", \"" + new Date() + "\")"
-                    );
-
-                    existingUsers = Database.extractResultSet(
-                            ((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + user.get("Username") + "\";")
-                    );
-
-                    if (existingUsers.length != 1) {
-                        return new Packet[] {Packet.createError("Failed to create new user", "Something went wrong")};
-                    }
-
-                    return new Packet[] {Packet.createPacket(
-                            Packet.TYPE_CREATE_NEW_USER,
-                            true,
-                            existingUsers[0]
-                    )};
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
+                return new Packet[] { Packet.createError("Feature Deprecation", "This feature is no longer available through PeopleCat, please refer to AuthCat.") };
             }
 
             @Override
@@ -171,36 +118,43 @@ public class ClientHandler extends ConnectionHandler {
                 JSONObject request = packets[0].getData();
                 JSONObject[] users;
 
-                // Request the data from the SQL server
+                JSONObject ac_req = new JSONObject();
+                if (request.containsKey("ID")) ac_req.put("id", request.get("ID"));
+                else if (request.containsKey("Username")) ac_req.put("username", request.get("Username"));
+                else if (request.containsKey("FullName")) ac_req.put("fullName", request.get("FullName"));
+
+                JSONObject response;
                 try {
-                    if (request.containsKey("ID")) {
-                        users = Database.extractResultSet(((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE UserID = " + request.get("ID") + ";"));
-
-                    } else if (request.containsKey("Username")) {
-                        users = Database.extractResultSet(((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE `username` LIKE \"" + request.get("Username") + "%\";"));
-
-                    } else if (request.containsKey("DisplayName")) {
-                        users = Database.extractResultSet(((ClientHandler) handler).server.db.Select("SELECT * FROM `users` WHERE DisplayName LIKE \"" + request.get("DisplayName") + "%\";"));
-
-                    } else {
-                        return new Packet[]{Packet.createError("Incorrect data provided", "You must provide at least one of the following fields, ID, username, or display_name")};
-                    }
-                } catch (SQLException e) {
+                    response = AuthCat.userSearch(ac_req);
+                } catch (InvalidResponse | IOException | InterruptedException e) {
                     throw new RuntimeException(e);
                 }
 
-                // In case no users are returned
-                if (users.length == 0) {
-                    return new Packet[] {
-                            Packet.createPacket(Packet.TYPE_GET_USER, true, new JSONObject())
-                    };
+                if (((String) response.get("state")).contentEquals("success")) {
+                    ArrayList<JSONObject> u = new ArrayList<>();
+                    JSONObject results = (JSONObject) response.get("results");
+                    for (Object k : results.keySet()) {
+                        u.add((JSONObject) results.get(k));
+                    }
+
+                    users = u.toArray(new JSONObject[0]);
+
+                    // In case no users are returned
+                    if (users.length == 0) {
+                        return new Packet[]{
+                                Packet.createPacket(Packet.TYPE_GET_USER, true, new JSONObject())
+                        };
+                    }
+                }
+                else {
+                    return new Packet[] { Packet.createError("AuthCat error", (String) response.get("message")) };
                 }
 
                 // Create the response packet sequence
-                Packet[] response = new Packet[users.length];
+                Packet[] reply = new Packet[users.length];
                 for (int i = 0; i < users.length-1; i++) {
                     users[i].remove("Password");
-                    response[i] = Packet.createPacket(
+                    reply[i] = Packet.createPacket(
                             Packet.TYPE_GET_USER,
                             false,
                             users[i]
@@ -208,13 +162,13 @@ public class ClientHandler extends ConnectionHandler {
                 }
 
                 users[users.length-1].remove("Password");
-                response[response.length-1] = Packet.createPacket(
+                reply[reply.length-1] = Packet.createPacket(
                         Packet.TYPE_GET_USER,
                         true,
                         users[users.length-1]
                 );
 
-                return response;
+                return reply;
             }
 
             @Override
@@ -305,7 +259,7 @@ public class ClientHandler extends ConnectionHandler {
             }
 
             @Override
-            public Packet[] notifitcationMessage(ConnectionHandler handler, Packet[] packets) {
+            public Packet[] notificationMessage(ConnectionHandler handler, Packet[] packets) {
                 return new Packet[] {Packet.createError("Invalid packet type", "The server is not able to receive message notification packets.")};
             }
 
@@ -351,17 +305,7 @@ public class ClientHandler extends ConnectionHandler {
 
             @Override
             public Packet[] changeProfilePicture(ConnectionHandler handler, Packet[] packets) {
-                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "The change profile picture request does not accept multi-packet arrays.")};
-
-                JSONObject request = packets[0].getData();
-                try {
-                    server.db.Update("UPDATE users SET ProfilePicturePath = " + (request.get("NewPath") == null ? "NULL" : "\"" + request.get("NewPath") + "\"") + " WHERE UserID = " + handler.user.get("UserID"));
-                } catch (Exception e) {
-                    return new Packet[] {Packet.createError("Server error", e.getMessage())};
-                }
-
-                return new Packet[] {Packet.createPacket(Packet.TYPE_CHANGE_PFP_PATH, true, new JSONObject())};
+                return new Packet[] { Packet.createError("Feature Deprecation", "This feature is no longer available through PeopleCat, please refer to AuthCat.") };
             }
         };
     }

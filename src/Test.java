@@ -67,7 +67,7 @@ class TestHandler extends ConnectionHandler {
             }
 
             @Override
-            public Packet[] notifitcationMessage(ConnectionHandler handler, Packet[] packets) {
+            public Packet[] notificationMessage(ConnectionHandler handler, Packet[] packets) {
                 return new Packet[0];
             }
 

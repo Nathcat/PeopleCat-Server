@@ -25,6 +25,7 @@ public class Database {
     private Connection conn;
     /**
      * The friendship store on this database
+     * @deprecated friendship store will be moved to an SQL table with the AuthCat integration
      */
     public DataStore<Integer, int[]> friendshipStore; // = new DataStore<>("Assets/Data/Friendships.bin");
     public DataStore<Integer, int[]> chatMemberships = new DataStore<>("Assets/Data/ChatMemberships.bin");
@@ -72,6 +73,7 @@ public class Database {
      * @param query The query to be executed
      * @return The ResultSet returned from the query
      * @throws SQLException Thrown by SQL errors.
+     * @deprecated Use prepared statements
      */
     public ResultSet Select(String query) throws SQLException {
         try {
@@ -103,6 +105,7 @@ public class Database {
      * Perform an update query on the database (or any query that does not have a result set)
      * @param query The query to be executed
      * @throws SQLException Thrown by SQL errors
+     * @deprecated Use prepared statements
      */
     public void Update(String query) throws SQLException {
         try {
@@ -123,6 +126,22 @@ public class Database {
 
             // Close the statement
             stmt.close();
+        }
+    }
+
+    /**
+     * Create a prepared SQL statement
+     * @param q The query to prepare
+     * @return The <code>PreparedStatement</code> object
+     * @throws SQLException Thrown in case of invalid SQL or some other error
+     */
+    public PreparedStatement getPreparedStatement(String q) throws SQLException {
+        try {
+            return conn.prepareStatement(q);
+        }
+        catch (CommunicationsException e) {
+            StartMySQLConnection();
+            return getPreparedStatement(q);
         }
     }
 

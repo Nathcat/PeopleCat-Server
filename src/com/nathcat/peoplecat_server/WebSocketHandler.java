@@ -10,11 +10,12 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.X509ExtendedKeyManager;
+import javax.net.ssl.*;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.*;
+import java.security.cert.CertificateException;
 import java.sql.SQLException;
 import java.util.HashMap;
 
@@ -27,7 +28,7 @@ public class WebSocketHandler extends WebSocketServer {
     public Server server;
     private final HashMap<WebSocket, ClientHandler> sockHandlerMap;
 
-    public static void main(String[] args) throws SQLException, IOException, ParseException, NoSuchFieldException, IllegalAccessException {
+    public static void main(String[] args) throws SQLException, IOException, ParseException, NoSuchFieldException, IllegalAccessException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException {
         WebSocketHandler webSocketHandler = new WebSocketHandler(new Server(Server.getOptions(args)));
 
         // Load SSL config file
@@ -40,21 +41,32 @@ public class WebSocketHandler extends WebSocketServer {
         }
 
         assert sslConfig != null;
+        /*
         assert sslConfig.containsKey("certchain-path");
         assert sslConfig.containsKey("privatekey-path");
+        assert sslConfig.containsKey("ca-path");
 
         String certchain_path = (String) sslConfig.get("certchain-path");
         String privatekey_path = (String) sslConfig.get("privatekey-path");
-        String privatekey_password = sslConfig.containsKey("privatekey-password") ? (String) sslConfig.get("privatekey-password") : "";
+        String ca_path = (String) sslConfig.get("ca-path");
 
         // Get SSL certificates and keys
-        X509ExtendedKeyManager keyManager = PemUtils.loadIdentityMaterial(certchain_path, privatekey_path, privatekey_password.toCharArray());
+        X509ExtendedKeyManager keyManager = PemUtils.loadIdentityMaterial(certchain_path, privatekey_path);
+        X509ExtendedTrustManager trustManager = PemUtils.loadTrustMaterial(ca_path);
 
         SSLFactory sslFactory = SSLFactory.builder()
                 .withIdentityMaterial(keyManager)
+                .withTrustMaterial(trustManager)
                 .build();
 
-        SSLContext sslContext = sslFactory.getSslContext();
+        SSLContext sslContext = sslFactory.getSslContext();*/
+
+        KeyStore keyStore = KeyStore.getInstance("JKS");
+        keyStore.load(new FileInputStream("Assets/SSL/nathcat.net.keystore"), "changeit".toCharArray());
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        keyManagerFactory.init(keyStore, "changeit".toCharArray());
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(keyManagerFactory.getKeyManagers(), null, new SecureRandom());
 
         // Start the server with the given SSL parameters
         webSocketHandler.setWebSocketFactory(new DefaultSSLWebSocketServerFactory(sslContext));
@@ -125,7 +137,7 @@ public class WebSocketHandler extends WebSocketServer {
     public void onStart() {
         Server.log("""
 ----- PeopleCat Server -----
-Version""" + Server.version + """
+Version\s""" + Server.version + "\n" + """ 
 Developed by Nathcat 2024""");
 
         Server.log("Running in websocket mode!");

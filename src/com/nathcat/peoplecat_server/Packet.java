@@ -91,6 +91,7 @@ public class Packet {
      *         "cover_pic_path": String
      *     }
      * </pre>
+     * @deprecated This will be delegated to AuthCat and no longer handled by PeopleCat
      */
     public static final int TYPE_CREATE_NEW_USER = 3;
     /**
@@ -255,6 +256,7 @@ public class Packet {
      *     The server will either respond with a packet with an empty payload under the type TYPE_CHANGE_PFP_PATH
      *     to indicate success, or it will reply with an error packet to indicate failure.
      * </p>
+     * @deprecated This will be delegated to AuthCat and no longer handled by PeopleCat
      */
     public static final int TYPE_CHANGE_PFP_PATH = 10;
 
