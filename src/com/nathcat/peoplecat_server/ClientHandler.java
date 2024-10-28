@@ -2,19 +2,16 @@ package com.nathcat.peoplecat_server;
 
 import com.nathcat.messagecat_database.MessageQueue;
 import com.nathcat.messagecat_database_entities.Message;
-import com.nathcat.messagecat_database_entities.User;
 import com.nathcat.peoplecat_database.Database;
+import org.java_websocket.WebSocket;
 import org.json.simple.JSONObject;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.net.Socket;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 
 /**
@@ -26,7 +23,23 @@ public class ClientHandler extends ConnectionHandler {
     private final Server server;
 
     public ClientHandler(Server server, Socket client) throws IOException {
-        super(client, new IPacketHandler() {
+        super(client, null);
+
+        this.packetHandler = createPacketHandler();
+
+        this.server = server;
+
+        log("Got connection.");
+    }
+
+    public ClientHandler(Server server, WebSocket client, WebSocketOutputStream os, WebSocketInputStream is) throws IOException {
+        super(client, os, is, null);
+        this.server = server;
+        packetHandler = createPacketHandler();
+    }
+
+    private IPacketHandler createPacketHandler() {
+        return new IPacketHandler() {
             @Override
             public Packet[] error(ConnectionHandler handler, Packet[] packets) {
                 return null;
@@ -247,7 +260,7 @@ public class ClientHandler extends ConnectionHandler {
                     return new Packet[] {Packet.createError("No messages", "There are no messages in this chat.")};
                 }
 
-                response.getLast().isFinal = true;
+                response.get(response.size() - 1).isFinal = true;
 
                 return response.toArray(new Packet[0]);
             }
@@ -350,11 +363,7 @@ public class ClientHandler extends ConnectionHandler {
 
                 return new Packet[] {Packet.createPacket(Packet.TYPE_CHANGE_PFP_PATH, true, new JSONObject())};
             }
-        });
-
-        this.server = server;
-
-        log("Got connection.");
+        };
     }
 
     @Override
@@ -362,7 +371,8 @@ public class ClientHandler extends ConnectionHandler {
         log("Thread started.");
         this.active = true;
 
-        this.setup();
+        // No longer required with the new websocket library
+        //this.setup();
 
         try {
             while (true) {

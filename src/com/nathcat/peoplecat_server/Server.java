@@ -3,7 +3,6 @@ package com.nathcat.peoplecat_server;
 import com.nathcat.peoplecat_database.Database;
 import org.json.simple.parser.ParseException;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
@@ -11,7 +10,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 
 public class Server {
@@ -25,12 +23,36 @@ public class Server {
         }
     }
 
+    public class HandlerCleanerThread extends Thread {
+        public HandlerCleanerThread() {
+            this.setDaemon(true);
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                for (int i = 0; i < handlers.size(); i++) {
+                    if (!handlers.get(i).active || !handlers.get(i).isAlive() || handlers.get(i).isInterrupted()) {
+                        handlers.remove(i);
+                    }
+                }
+
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+    }
+
     public static final String version = "1.1.1";
 
     public int port;
     public int threadCount;
     public Database db;
     public ArrayList<ClientHandler> handlers = new ArrayList<>();
+    private Thread handlerCleaner;
 
 
     public Server(Options options) throws NoSuchFieldException, IllegalAccessException, SQLException, IOException, ParseException {
@@ -42,8 +64,7 @@ public class Server {
         db = new Database();
     }
 
-    public static void main(String[] args) throws NoSuchFieldException, IllegalAccessException, SQLException, IOException, ParseException {
-        // Get the options from the cli arguments
+    public static Options getOptions(String[] args) {
         int port = 1234;
         int threadCount = 10;
 
@@ -63,11 +84,20 @@ public class Server {
             }
         }
 
+        return new Options(port, threadCount);
+    }
+
+    public static void main(String[] args) throws NoSuchFieldException, IllegalAccessException, SQLException, IOException, ParseException {
         // Create the server instance from the options
-        Server server = new Server(new Options(port, threadCount));
+        Server server = new Server(getOptions(args));
         server.start();
     }
 
+    /**
+     * Starts the server
+     * @throws IOException thrown by failing I/O operations
+     * @deprecated to be deprecated with the implementation of a new websocket library which will be used as the new primary method to accept connections
+     */
     public void start() throws IOException {
         log("""
                 ----- PeopleCat Server -----
@@ -78,23 +108,7 @@ public class Server {
         log("Starting up...");
 
         // This is a small worker thread which cleans the handler array by removing inactive handlers.
-        Thread cleanerThread = new Thread(() -> {
-            while (true) {
-                for (int i = 0; i < handlers.size(); i++) {
-                    if (!handlers.get(i).active || !handlers.get(i).isAlive() || handlers.get(i).isInterrupted()) {
-                        handlers.remove(i);
-                    }
-                }
-
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        });
-
-        cleanerThread.setDaemon(true);
+        Thread cleanerThread = new HandlerCleanerThread();
         cleanerThread.start();
 
         ServerSocket ss = new ServerSocket(port);
@@ -125,6 +139,11 @@ public class Server {
                 handlers.remove(handler);
             }
         }
+    }
+
+    public void startCleaner() {
+        handlerCleaner = new HandlerCleanerThread();
+        handlerCleaner.start();
     }
 
     public static void log(Object message) {

@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
  * of the PeopleCat platform.
  *
  * @author Nathan Baines
+ * @deprecated Handling of websockets to be handed off to new library
  */
 public class WebSocketAdapter {
     /**
@@ -208,7 +209,7 @@ public class WebSocketAdapter {
                 else payload[i] = (byte) c_buffer[i];
             }
 
-            byte length_desc = 0;
+            byte length_desc;
             byte[] extra_length = new byte[0];
 
             if (payload.length >= 0 && payload.length <= 125) {
@@ -243,7 +244,7 @@ public class WebSocketAdapter {
             sb.append("{\n");
             for (Field field : this.getClass().getFields()) {
                 try {
-                    sb.append("\t" + field.getName() + ": " + (field.getType() == byte[].class ? Arrays.toString((byte[]) field.get(this)) : field.get(this)) + "\n");
+                    sb.append("\t").append(field.getName()).append(": ").append(field.getType() == byte[].class ? Arrays.toString((byte[]) field.get(this)) : field.get(this)).append("\n");
                 } catch (IllegalAccessException e) {
                     throw new RuntimeException(e);
                 }

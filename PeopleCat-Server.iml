@@ -11,5 +11,7 @@
     <orderEntry type="library" name="MessageCat_ServerLib" level="project" />
     <orderEntry type="library" name="mysql-connector-j-8.0.33" level="project" />
     <orderEntry type="library" name="RSACryptoSystem" level="project" />
+    <orderEntry type="library" name="Java-WebSocket-1.5.7" level="project" />
+    <orderEntry type="library" name="io.github.hakky54.sslcontext.kickstart.for.pem" level="project" />
   </component>
 </module>
