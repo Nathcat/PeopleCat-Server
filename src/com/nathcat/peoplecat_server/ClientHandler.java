@@ -312,7 +312,7 @@ public class ClientHandler extends ConnectionHandler {
 
                 int[] newMembers = new int[members.length + 1];
                 System.arraycopy(members, 0, newMembers, 0, members.length);
-                newMembers[members.length] = (int) handler.user.get("id");
+                newMembers[members.length] = (int) ((long) handler.user.get("id"));
                 server.db.chatMemberships.set(chatID, newMembers);
 
                 return new Packet[] {Packet.createPacket(Packet.TYPE_JOIN_CHAT, true, chat)};
