@@ -153,11 +153,18 @@ public class WebSocketHandler extends WebSocketServer {
 
     @Override
     public void onError(org.java_websocket.WebSocket webSocket, Exception e) {
-        // Close the relevant client handler and log the error
-        ClientHandler h = sockHandlerMap.get(webSocket);
-        h.log("WebSocket error: " + e.getClass().getName() + "\n" + Server.stringifyStackTrace(e.getStackTrace()));
-        h.close();
-        sockHandlerMap.remove(webSocket);
+        try {
+            // Close the relevant client handler and log the error
+            ClientHandler h = sockHandlerMap.get(webSocket);
+            h.log("WebSocket error: " + e.getClass().getName() + "\n" + Server.stringifyStackTrace(e.getStackTrace()));
+            h.close();
+            sockHandlerMap.remove(webSocket);
+        }
+        catch (Exception e2) {
+            Server.log("\033[91;3mFailed to stop handler as none was found for the given websocket");
+            Server.log("An error occurred during setup:");
+            Server.log(e.getClass().getName() + "\n" + Server.stringifyStackTrace(e.getStackTrace()));
+        }
     }
 
     @Override
