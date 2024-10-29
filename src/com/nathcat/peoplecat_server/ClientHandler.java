@@ -275,7 +275,10 @@ public class ClientHandler extends ConnectionHandler {
                 JSONObject request = packets[0].getData();
                 JSONObject chat;
                 try {
-                    JSONObject[] results = Database.extractResultSet(server.db.Select("select * from chats where ChatID = " + request.get("ChatID") + ";"));
+                    JSONObject[] results;
+                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT * FROM Chats WHERE ChatID = ?");
+                    stmt.setInt(1, (int) request.get("ChatID"));
+                    stmt.execute(); results = Database.extractResultSet(stmt.getResultSet());
 
                     if (results.length != 1) {
                         return new Packet[] {Packet.createError("Database error", "Could not find the specified chat or multiple chats exist with this ID.")};
