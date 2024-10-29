@@ -75,7 +75,9 @@ public class ClientHandler extends ConnectionHandler {
                 JSONObject authCatJSON = new JSONObject();
                 authCatJSON.put("username", user.get("Username"));
                 authCatJSON.put("password", user.get("Password"));
+                authCatJSON.put("pre-hashed", "");
 
+                handler.log("To AuthCat: " + authCatJSON.toJSONString());
 
                 JSONObject authCatResponse;
                 try {
@@ -84,8 +86,10 @@ public class ClientHandler extends ConnectionHandler {
                     throw new RuntimeException(e);
                 }
 
+                handler.log("Got response from AuthCat: " + authCatResponse.toJSONString());
+
                 // Check the response from the service
-                if (((String)authCatResponse.get("state")).contentEquals("fail")) {
+                if (((String)authCatResponse.get("status")).contentEquals("fail")) {
                     handler.authenticated = false;
                     return new Packet[] {Packet.createError("Auth failed", (String) authCatResponse.get("message"))};
                 }
@@ -130,7 +134,7 @@ public class ClientHandler extends ConnectionHandler {
                     throw new RuntimeException(e);
                 }
 
-                if (((String) response.get("state")).contentEquals("success")) {
+                if (((String) response.get("status")).contentEquals("success")) {
                     ArrayList<JSONObject> u = new ArrayList<>();
                     JSONObject results = (JSONObject) response.get("results");
                     for (Object k : results.keySet()) {

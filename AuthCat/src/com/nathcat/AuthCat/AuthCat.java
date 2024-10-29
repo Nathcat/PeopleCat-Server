@@ -29,22 +29,19 @@ public class AuthCat {
         return HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NORMAL)
-                .authenticator(Authenticator.getDefault())
+                .authenticator(null)
                 .build();
     }
 
     private static HttpResponse<String> sendRequest(String uri, JSONObject body) throws IOException, InterruptedException {
+        HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(uri))
-                .timeout(Duration.ofMinutes(1))
-                .header("Content-Type", "application/json")
+                .setHeader("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body.toJSONString()))
                 .build();
 
-        HttpClient client = makeClient();
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        return response;
+        return client.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
     /**

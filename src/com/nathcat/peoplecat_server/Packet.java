@@ -309,6 +309,17 @@ public class Packet {
     }
 
     /**
+     * Get the data contained by this packet in JSON websocket format.
+     * @return A <code>JSONObject</code> containing the JSON websocket format data contained by this packet.
+     */
+    public JSONObject getData_WebSocket() {
+        JSONObject d = getData();
+        d.put("type", type);
+        d.put("isFinal", isFinal);
+        return d;
+    }
+
+    /**
      * Create a packet from a JSONObject, used in websocket communication.
      * @param data The JSON data from the websocket
      * @return The equivalent packet

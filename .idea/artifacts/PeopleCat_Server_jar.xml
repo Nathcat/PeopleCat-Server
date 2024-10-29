@@ -1,12 +1,17 @@
 <component name="ArtifactManager">
-  <artifact type="jar" build-on-make="true" name="PeopleCat-Server:jar">
+  <artifact type="jar" name="PeopleCat-Server:jar">
     <output-path>$PROJECT_DIR$/out/artifacts/PeopleCat_Server_jar</output-path>
     <root id="archive" name="PeopleCat-Server.jar">
       <element id="module-output" name="PeopleCat-Server" />
+      <element id="module-output" name="AuthCat" />
       <element id="extracted-dir" path="$PROJECT_DIR$/libs/json-simple-1.1.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$PROJECT_DIR$/libs/RSACryptoSystem.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$PROJECT_DIR$/libs/MessageCat_ServerLib.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/libs/Java-WebSocket-1.5.7.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$PROJECT_DIR$/libs/mysql-connector-j-8.0.33.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/io/github/hakky54/sslcontext-kickstart-for-pem/8.2.0/sslcontext-kickstart-for-pem-8.2.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/io/github/hakky54/sslcontext-kickstart/8.2.0/sslcontext-kickstart-8.2.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/slf4j/slf4j-api/2.0.9/slf4j-api-2.0.9.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>

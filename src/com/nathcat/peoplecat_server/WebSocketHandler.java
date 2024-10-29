@@ -17,6 +17,8 @@ import java.net.InetSocketAddress;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 /**
@@ -82,12 +84,16 @@ public class WebSocketHandler extends WebSocketServer {
 
     @Override
     public void onOpen(org.java_websocket.WebSocket webSocket, ClientHandshake clientHandshake) {
+        server.log("Connection received");
+
         // If the server is full close the connection
         if (server.handlers.size() >= server.threadCount) {
+            server.log("Server is full, rejecting connection");
             webSocket.send("Server is full!");
             webSocket.close();
         }
         else {  // ... otherwise link the connection to a new client handler
+            server.log("Trying to accept connection");
             try {
                 ClientHandler h = new ClientHandler(server, webSocket, new WebSocketOutputStream(webSocket), new WebSocketInputStream(webSocket));
                 sockHandlerMap.put(webSocket, h);
@@ -95,6 +101,8 @@ public class WebSocketHandler extends WebSocketServer {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+
+            server.log("Accepted connection into handler");
         }
     }
 
@@ -111,16 +119,35 @@ public class WebSocketHandler extends WebSocketServer {
         // Try to pass the received packet to the relevant client handler,
         // failing this, send an error packet with the error information
         ClientHandler h = sockHandlerMap.get(webSocket);
+        h.log("Got packet from socket: " + s);
         try {
-            ((WebSocketInputStream) h.inStream)
+            /*((WebSocketInputStream) h.inStream)
                     .pushPacket(
                             Packet.fromData(
                                     (JSONObject) new JSONParser().parse(s)
                             )
                     );
+
+            h.log("Pushed packet to queue");*/
+
+            Packet p = Packet.fromData((JSONObject) new JSONParser().parse(s));
+            WebSocketInputStream is = (WebSocketInputStream) h.inStream;
+            is.pushPacket(p);
+
+            ArrayList<Packet> packetList = new ArrayList<>();
+            if (p.isFinal) {
+                while (is.available() > 0) {
+                    packetList.add(is.getNextPacket());
+                }
+            }
+
+            Packet[] response = h.packetHandler.handle(h, packetList.toArray(new Packet[0]));
+            ((WebSocketOutputStream) h.outStream).write(response);
+            h.log("Written response: " + Arrays.toString(response));
         }
         catch (Exception e) {
             h.writePacket(Packet.createError(e.getClass().getName(), e.getMessage()));
+            h.log("Written error message: \033[91;3m" + e.getClass().getName() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
         }
     }
 

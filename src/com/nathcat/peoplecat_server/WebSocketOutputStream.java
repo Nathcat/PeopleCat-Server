@@ -31,7 +31,7 @@ public class WebSocketOutputStream extends OutputStream {
         packetData.put("isFinal", packet.isFinal ? 1 : 0);
 
         SecureRandom rng = new SecureRandom();
-        return WebSocketAdapter.Fragment.FromData(packetData.toJSONString(), null/*rng.generateSeed(4)*/);
+        return packetData.toJSONString().getBytes();
     }
 
     @Override
@@ -44,6 +44,22 @@ public class WebSocketOutputStream extends OutputStream {
         Packet p = new Packet(new ByteArrayInputStream(b));
         byte[] buffer = createMessageBuffer(p);
 
+        System.out.println("Sending packet: " + p);
         socket.send(new String(buffer));
     }
+
+    /**
+     * Write all given packets to the websocket
+     * @param packets The array of packets to write, must end with a final packet, where <code>Packet.isFinal = true</code>
+     * @throws IOException Thrown should the writing operation fail
+     */
+    public void write(Packet[] packets) throws IOException {
+        for (Packet p : packets) {
+            System.out.println("\tSending: " + p.getData_WebSocket().toJSONString());
+            socket.send(p.getData_WebSocket().toJSONString());
+        }
+    }
+
+    @Override
+    public void flush() { /* Do nothing, this stream does not buffer any data */ }
 }

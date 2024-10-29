@@ -5,10 +5,11 @@ import org.java_websocket.WebSocket;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.AbstractQueue;
+import java.util.LinkedList;
+import java.util.Queue;
 
 public class WebSocketInputStream extends InputStream {
-    private AbstractQueue<Packet> queue;
+    private Queue<Packet> queue = new LinkedList<>();
     private ByteArrayInputStream currentPacketStream;
     public final WebSocket socket;
 
@@ -21,6 +22,10 @@ public class WebSocketInputStream extends InputStream {
 
     public void pushPacket(Packet p) {
         queue.add(p);
+    }
+
+    public Packet getNextPacket() {
+        return queue.remove();
     }
 
     private void updateCurrentPacket() {
@@ -36,7 +41,10 @@ public class WebSocketInputStream extends InputStream {
 
     @Override
     public int read(byte[] b) throws IOException {
-        updateCurrentPacket();
+        while (currentPacketStream == null || currentPacketStream.available() == 0) {
+            updateCurrentPacket();
+        }
+
         return currentPacketStream.read(b);
     }
 
@@ -44,5 +52,10 @@ public class WebSocketInputStream extends InputStream {
     public byte[] readNBytes(int n) throws IOException {
         updateCurrentPacket();
         return currentPacketStream.readNBytes(n);
+    }
+
+    @Override
+    public int available() {
+        return queue.size();
     }
 }
