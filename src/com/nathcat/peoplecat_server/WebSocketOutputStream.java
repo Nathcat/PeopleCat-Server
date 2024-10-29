@@ -42,10 +42,10 @@ public class WebSocketOutputStream extends OutputStream {
     @Override
     public void write(byte[] b) throws IOException {
         Packet p = new Packet(new ByteArrayInputStream(b));
-        byte[] buffer = createMessageBuffer(p);
+        JSONObject d = p.getData_WebSocket();
 
-        System.out.println("Sending packet: " + p);
-        socket.send(new String(buffer));
+        System.out.println("Sending packet: " + d.toJSONString());
+        socket.send(d.toJSONString());
     }
 
     /**
