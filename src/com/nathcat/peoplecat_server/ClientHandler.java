@@ -188,7 +188,10 @@ public class ClientHandler extends ConnectionHandler {
                 MessageQueue queue = server.db.messageStore.GetMessageQueue(Math.toIntExact((long) request.get("ChatID")));  // Because for some fucking reason this is a long
 
                 if (queue == null) {
-                    return new Packet[] {Packet.createError("Chat does not exist", "The message queue for the specified chat does not exist in the database.")};
+                    // Change of behaviour here, create a queue rather than reply with an error
+                    //return new Packet[] {Packet.createError("Chat does not exist", "The message queue for the specified chat does not exist in the database.")};
+                    queue = new MessageQueue(1);
+                    server.db.messageStore.AddMessageQueue(queue);
                 }
 
                 ArrayList<Packet> response = new ArrayList<>();
@@ -277,7 +280,7 @@ public class ClientHandler extends ConnectionHandler {
                 try {
                     JSONObject[] results;
                     PreparedStatement stmt = server.db.getPreparedStatement("SELECT * FROM Chats WHERE ChatID = ?");
-                    stmt.setInt(1, (int) request.get("ChatID"));
+                    stmt.setInt(1, (int) ((long) request.get("ChatID")));
                     stmt.execute(); results = Database.extractResultSet(stmt.getResultSet());
 
                     if (results.length != 1) {
@@ -296,6 +299,11 @@ public class ClientHandler extends ConnectionHandler {
 
                 int chatID = Math.toIntExact((long) request.get("ChatID"));
                 int[] members = server.db.chatMemberships.get(chatID);
+                if (members == null) {
+                    server.db.chatMemberships.set(chatID, new int[0]);
+                    members = server.db.chatMemberships.get(chatID);
+                }
+
                 for (int m : members) {
                     if (m == (int) handler.user.get("UserID")) {
                         return new Packet[] {Packet.createError("Already member", "You are already a member of this chat.")};
