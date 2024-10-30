@@ -33,6 +33,8 @@ public interface IPacketHandler {
      * @param handler The ConnectionHandler handling the connection
      * @param packets The packet sequence
      * @return Response packet sequence
+     * @deprecated
+     * @see com.nathcat.peoplecat_server.Packet#TYPE_CREATE_NEW_USER
      */
     Packet[] createNewUser(ConnectionHandler handler, Packet[] packets);
     /**
@@ -72,7 +74,7 @@ public interface IPacketHandler {
      * @param packets The packet sequence
      * @return The response packet sequence
      */
-    Packet[] notifitcationMessage(ConnectionHandler handler, Packet[] packets);
+    Packet[] notificationMessage(ConnectionHandler handler, Packet[] packets);
 
     /**
      * Join a chat
@@ -87,6 +89,8 @@ public interface IPacketHandler {
      * @param handler The connection handler handling the connection
      * @param packets The packet sequence
      * @return The response packet sequence
+     * @deprecated
+     * @see Packet#TYPE_CHANGE_PFP_PATH
      */
     Packet[] changeProfilePicture(ConnectionHandler handler, Packet[] packets);
 
@@ -107,7 +111,7 @@ public interface IPacketHandler {
             case Packet.TYPE_GET_USER -> getUser(handler, packets);
             case Packet.TYPE_GET_MESSAGE_QUEUE -> getMessageQueue(handler, packets);
             case Packet.TYPE_SEND_MESSAGE -> sendMessage(handler, packets);
-            case Packet.TYPE_NOTIFICATION_MESSAGE -> notifitcationMessage(handler, packets);
+            case Packet.TYPE_NOTIFICATION_MESSAGE -> notificationMessage(handler, packets);
             case Packet.TYPE_JOIN_CHAT -> joinChat(handler, packets);
             case Packet.TYPE_CHANGE_PFP_PATH -> changeProfilePicture(handler, packets);
 

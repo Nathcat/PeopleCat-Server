@@ -1,6 +1,6 @@
 package com.nathcat.peoplecat_server;
 
-import com.nathcat.messagecat_database_entities.User;
+import org.java_websocket.WebSocket;
 import org.json.simple.JSONObject;
 
 import java.io.IOException;
@@ -9,7 +9,8 @@ import java.io.OutputStream;
 import java.net.Socket;
 
 public class ConnectionHandler extends Thread {
-    private final Socket client;
+    private Socket client;
+    private WebSocket webClient;
     public OutputStream outStream;
     public InputStream inStream;
     public IPacketHandler packetHandler;
@@ -28,6 +29,13 @@ public class ConnectionHandler extends Thread {
         start();
     }
 
+    public ConnectionHandler(WebSocket client, WebSocketOutputStream os, WebSocketInputStream is, IPacketHandler packetHandler) throws IOException {
+        webClient = client;
+        this.packetHandler = packetHandler;
+        this.outStream = os;
+        this.inStream = is;
+    }
+
     public void log(String message) {
         System.out.println("Handler " + threadId() + ": " + message);
     }
@@ -39,6 +47,7 @@ public class ConnectionHandler extends Thread {
 
     /**
      * Perform basic setup of connection between the server and the client. This is effectively the handshake process.
+     * @deprecated no longer needed with the new websocket library
      */
     public void setup() {
         try {
@@ -55,12 +64,7 @@ public class ConnectionHandler extends Thread {
      */
     public Packet getPacket() {
         try {
-            if (!isWebsocket) {
-                return new Packet(inStream);
-            }
-            else {
-                return WebSocketAdapter.readPacket(inStream);
-            }
+            return new Packet(inStream);
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -73,7 +77,8 @@ public class ConnectionHandler extends Thread {
      */
     public void writePacket(Packet p) {
         try {
-            outStream.write(isWebsocket ? WebSocketAdapter.createMessageBuffer(p) : p.getBytes());
+            log("Asked to write packet: " + p);
+            outStream.write(p.getBytes());
             outStream.flush();
 
         } catch (IOException e) {
@@ -86,7 +91,8 @@ public class ConnectionHandler extends Thread {
      */
     public void close() {
         try {
-            client.close();
+            if (client != null) client.close();
+            else webClient.close();
         } catch (IOException ignored) {}
     }
 

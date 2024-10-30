@@ -91,6 +91,7 @@ public class Packet {
      *         "cover_pic_path": String
      *     }
      * </pre>
+     * @deprecated This will be delegated to AuthCat and no longer handled by PeopleCat
      */
     public static final int TYPE_CREATE_NEW_USER = 3;
     /**
@@ -255,6 +256,7 @@ public class Packet {
      *     The server will either respond with a packet with an empty payload under the type TYPE_CHANGE_PFP_PATH
      *     to indicate success, or it will reply with an error packet to indicate failure.
      * </p>
+     * @deprecated This will be delegated to AuthCat and no longer handled by PeopleCat
      */
     public static final int TYPE_CHANGE_PFP_PATH = 10;
 
@@ -304,6 +306,18 @@ public class Packet {
         } catch (ParseException e) {
             return null;
         }
+    }
+
+    /**
+     * Get the data contained by this packet in JSON websocket format.
+     * @return A <code>JSONObject</code> containing the JSON websocket format data contained by this packet.
+     */
+    public JSONObject getData_WebSocket() {
+        JSONObject d = getData();
+        d = d == null ? new JSONObject() : d;
+        d.put("type", type);
+        d.put("isFinal", isFinal);
+        return d;
     }
 
     /**

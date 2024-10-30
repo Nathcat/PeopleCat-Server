@@ -1,7 +1,3 @@
-import com.nathcat.messagecat_database.MessageQueue;
-import com.nathcat.messagecat_database.MessageStore;
-import com.nathcat.messagecat_database_entities.Message;
-import com.nathcat.peoplecat_database.DataStore;
 import com.nathcat.peoplecat_server.ConnectionHandler;
 import com.nathcat.peoplecat_server.IPacketHandler;
 import com.nathcat.peoplecat_server.Packet;
@@ -9,10 +5,8 @@ import com.nathcat.peoplecat_server.Server;
 import org.json.simple.JSONObject;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Date;
 
 public class Test {
     public static void main(String[] args) throws Exception {
@@ -73,7 +67,7 @@ class TestHandler extends ConnectionHandler {
             }
 
             @Override
-            public Packet[] notifitcationMessage(ConnectionHandler handler, Packet[] packets) {
+            public Packet[] notificationMessage(ConnectionHandler handler, Packet[] packets) {
                 return new Packet[0];
             }
 
