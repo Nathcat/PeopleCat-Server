@@ -1,3 +1,5 @@
 unnamed package
+com.nathcat.AuthCat
+com.nathcat.AuthCat.Exceptions
 com.nathcat.peoplecat_database
 com.nathcat.peoplecat_server
