@@ -324,6 +324,20 @@ public class ClientHandler extends ConnectionHandler {
             public Packet[] changeProfilePicture(ConnectionHandler handler, Packet[] packets) {
                 return new Packet[] { Packet.createError("Feature Deprecation", "This feature is no longer available through PeopleCat, please refer to AuthCat.") };
             }
+
+            @Override
+            public Packet[] getActiveUserCount(ConnectionHandler handler, Packet[] packets) {
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+
+                JSONObject d = new JSONObject();
+                d.put("users-online", server.handlers.size());
+
+                return new Packet[] { Packet.createPacket(
+                        Packet.TYPE_GET_ACTIVE_USER_COUNT,
+                        true,
+                        d
+                ) };
+            }
         };
     }
 

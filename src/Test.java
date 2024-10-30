@@ -81,6 +81,11 @@ class TestHandler extends ConnectionHandler {
                 System.out.println(packets[0] + " -> " + packets[0].getData());
                 return new Packet[0];
             }
+
+            @Override
+            public Packet[] getActiveUserCount(ConnectionHandler handler, Packet[] packets) {
+                return new Packet[0];
+            }
         });
     }
 

@@ -261,6 +261,26 @@ public class Packet {
     public static final int TYPE_CHANGE_PFP_PATH = 10;
 
     /**
+     * <h3>Purpose</h3>
+     * <p>
+     *     Get the number of users currently online
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <p>
+     *     No payload required
+     * </p>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     {
+     *         "users-online": Int
+     *     }
+     * </p>
+     */
+    public static final int TYPE_GET_ACTIVE_USER_COUNT = 11;
+
+    /**
      * The type of request specified by the packet
      */
     public int type;

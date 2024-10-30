@@ -95,6 +95,15 @@ public interface IPacketHandler {
     Packet[] changeProfilePicture(ConnectionHandler handler, Packet[] packets);
 
     /**
+     * Get the number of currently active users
+     * @param handler The handler handling the connection to the client
+     * @param packets The packet sequence
+     * @return The packet sequence to respond with
+     * @see Packet#TYPE_GET_ACTIVE_USER_COUNT
+     */
+    Packet[] getActiveUserCount(ConnectionHandler handler, Packet[] packets);
+
+    /**
      * Handle a packet sequence by determining which handler method to pass it to. Uses the type of the first packet
      * in the sequence to determine the appropriate handler method.
      * @param handler The ConnectionHandler handling the connection
@@ -114,6 +123,7 @@ public interface IPacketHandler {
             case Packet.TYPE_NOTIFICATION_MESSAGE -> notificationMessage(handler, packets);
             case Packet.TYPE_JOIN_CHAT -> joinChat(handler, packets);
             case Packet.TYPE_CHANGE_PFP_PATH -> changeProfilePicture(handler, packets);
+            case Packet.TYPE_GET_ACTIVE_USER_COUNT -> getActiveUserCount(handler, packets);
 
             default -> throw new IllegalStateException("Unexpected value: " + packets[0].type);
         };
