@@ -96,6 +96,7 @@ public class ClientHandler extends ConnectionHandler {
 
                 handler.authenticated = true;
                 handler.user = (JSONObject) authCatResponse.get("user");
+                handler.user.put("id", Math.toIntExact((long) handler.user.get("id")));
                 return new Packet[] {Packet.createPacket(
                         Packet.TYPE_AUTHENTICATE,
                         true,
@@ -134,7 +135,7 @@ public class ClientHandler extends ConnectionHandler {
                     throw new RuntimeException(e);
                 }
 
-                if (((String) response.get("status")).contentEquals("success")) {
+                if (((String) response.get("state")).contentEquals("success")) {
                     ArrayList<JSONObject> u = new ArrayList<>();
                     JSONObject results = (JSONObject) response.get("results");
                     for (Object k : results.keySet()) {
@@ -312,7 +313,7 @@ public class ClientHandler extends ConnectionHandler {
 
                 int[] newMembers = new int[members.length + 1];
                 System.arraycopy(members, 0, newMembers, 0, members.length);
-                newMembers[members.length] = (int) ((long) handler.user.get("id"));
+                newMembers[members.length] = (int) handler.user.get("id");
                 server.db.chatMemberships.set(chatID, newMembers);
 
                 return new Packet[] {Packet.createPacket(Packet.TYPE_JOIN_CHAT, true, chat)};

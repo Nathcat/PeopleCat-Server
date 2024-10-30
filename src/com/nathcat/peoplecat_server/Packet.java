@@ -314,6 +314,7 @@ public class Packet {
      */
     public JSONObject getData_WebSocket() {
         JSONObject d = getData();
+        d = d == null ? new JSONObject() : d;
         d.put("type", type);
         d.put("isFinal", isFinal);
         return d;
