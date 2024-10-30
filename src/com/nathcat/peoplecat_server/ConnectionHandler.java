@@ -93,6 +93,8 @@ public class ConnectionHandler extends Thread {
         try {
             if (client != null) client.close();
             else webClient.close();
+
+            active = false;
         } catch (IOException ignored) {}
     }
 
