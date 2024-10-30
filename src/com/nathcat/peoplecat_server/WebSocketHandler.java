@@ -97,6 +97,7 @@ public class WebSocketHandler extends WebSocketServer {
             try {
                 ClientHandler h = new ClientHandler(server, webSocket, new WebSocketOutputStream(webSocket), new WebSocketInputStream(webSocket));
                 sockHandlerMap.put(webSocket, h);
+                h.active = true;
                 server.handlers.add(h);
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -176,6 +177,6 @@ Developed by Nathcat 2024""");
 
         Server.log("Running in websocket mode!");
 
-        server.startCleaner();
+        server.startCleaner(false);
     }
 }

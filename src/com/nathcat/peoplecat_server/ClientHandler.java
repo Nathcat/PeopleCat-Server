@@ -257,6 +257,7 @@ public class ClientHandler extends ConnectionHandler {
                     for (ConnectionHandler otherHandler : server.handlers) {
                         if (!otherHandler.authenticated || !otherHandler.active) continue;
 
+                        handler.log("Passed auth and ID check");
                         if ((int) otherHandler.user.get("id") == userID) {
                             otherHandler.writePacket(notifyPacket);
                         }

@@ -44,7 +44,6 @@ public class WebSocketOutputStream extends OutputStream {
         Packet p = new Packet(new ByteArrayInputStream(b));
         JSONObject d = p.getData_WebSocket();
 
-        System.out.println("Sending packet: " + d.toJSONString());
         socket.send(d.toJSONString());
     }
 
@@ -55,7 +54,6 @@ public class WebSocketOutputStream extends OutputStream {
      */
     public void write(Packet[] packets) throws IOException {
         for (Packet p : packets) {
-            System.out.println("\tSending: " + p.getData_WebSocket().toJSONString());
             socket.send(p.getData_WebSocket().toJSONString());
         }
     }

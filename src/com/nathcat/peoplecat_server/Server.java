@@ -24,15 +24,32 @@ public class Server {
     }
 
     public class HandlerCleanerThread extends Thread {
+        private final boolean livingHandlersMode;
+
+        /**
+         * Create a new Handler cleaning thread
+         * @param livingHandlersMode Overrides the conditions which check if a handler's thread is actually running.
+         *                           Will be used mainly with the <code>WebSocketHandler</code> since this does not allow
+         *                           <code>ClientHandlers</code> to run in their own thread.
+         */
+        public HandlerCleanerThread(boolean livingHandlersMode) {
+            this.setDaemon(true);
+            this.livingHandlersMode = livingHandlersMode;
+        }
+
+        /**
+         * Default constructor, sets <code>livingHandlerMode</code> to <code>true</code>.
+         */
         public HandlerCleanerThread() {
             this.setDaemon(true);
+            this.livingHandlersMode = true;
         }
 
         @Override
         public void run() {
             while (true) {
                 for (int i = 0; i < handlers.size(); i++) {
-                    if (!handlers.get(i).active || !handlers.get(i).isAlive() || handlers.get(i).isInterrupted()) {
+                    if (!handlers.get(i).active || ((!handlers.get(i).isAlive() || handlers.get(i).isInterrupted()) && livingHandlersMode)) {
                         handlers.remove(i);
                     }
                 }
@@ -141,8 +158,8 @@ public class Server {
         }
     }
 
-    public void startCleaner() {
-        handlerCleaner = new HandlerCleanerThread();
+    public void startCleaner(boolean livingHandlerMode) {
+        handlerCleaner = new HandlerCleanerThread(livingHandlerMode);
         handlerCleaner.start();
     }
 
