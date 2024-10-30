@@ -77,7 +77,6 @@ public class ConnectionHandler extends Thread {
      */
     public void writePacket(Packet p) {
         try {
-            log("Asked to write packet: " + p);
             outStream.write(p.getBytes());
             outStream.flush();
 
