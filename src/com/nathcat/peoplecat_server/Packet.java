@@ -5,6 +5,8 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  * <p>Class for creating data which can be sent / received by the server / client.</p>
@@ -315,15 +317,16 @@ public class Packet {
      * @return The JSONObject contained within this packet's payload
      */
     public JSONObject getData() {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : payload) {
-            sb.append((char) b);
-        }
+        String p = new String(payload, StandardCharsets.UTF_8);
 
         try {
-            return (JSONObject) new JSONParser().parse(sb.toString());
+            return (JSONObject) new JSONParser().parse(p);
 
         } catch (ParseException e) {
+            System.out.println("\033[91;3m----- PACKET JSON DECODE ERROR -----\n");
+            System.out.println("Culprit String: " + p + "\n\nError:\n");
+            e.printStackTrace();
+            System.out.println("\033[0m");
             return null;
         }
     }
@@ -351,7 +354,7 @@ public class Packet {
         p.isFinal = (boolean) data.get("isFinal");
         data.remove("type");
         data.remove("isFinal");
-        p.payload = data.toJSONString().getBytes();
+        p.payload = data.toJSONString().getBytes(StandardCharsets.UTF_8);
 
         return p;
     }

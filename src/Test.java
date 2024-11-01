@@ -1,3 +1,6 @@
+import com.nathcat.messagecat_database.MessageQueue;
+import com.nathcat.messagecat_database.MessageStore;
+import com.nathcat.messagecat_database_entities.Message;
 import com.nathcat.peoplecat_server.ConnectionHandler;
 import com.nathcat.peoplecat_server.IPacketHandler;
 import com.nathcat.peoplecat_server.Packet;
@@ -5,14 +8,33 @@ import com.nathcat.peoplecat_server.Server;
 import org.json.simple.JSONObject;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class Test {
     public static void main(String[] args) throws Exception {
-        TestHandler t = new TestHandler();
+        MessageStore s = new MessageStore();
+        MessageQueue queue = s.GetMessageQueue(1);
 
-        while (true) {}
+        //queue.Push(new Message(1, 1, new Date().getTime(), "°"));
+
+        Message msg;
+        int i = 0;
+        while ((msg = queue.Get(i)) != null) {  // I really hate my old code ;_;
+            JSONObject msgData = new JSONObject();
+
+            for (Field field : Message.class.getFields()) {
+                try {
+                    msgData.put(field.getName(), field.get(msg));
+                } catch (IllegalAccessException ignored) {}
+            }
+
+            System.out.println(msgData.toJSONString());
+
+            i++;
+        }
     }
 }
 

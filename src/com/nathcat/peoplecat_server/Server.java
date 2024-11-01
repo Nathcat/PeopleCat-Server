@@ -16,10 +16,12 @@ public class Server {
     public static class Options {
         public int port;
         public int threadCount;
+        public boolean useSSL;
 
-        public Options(int port, int threadCount) {
+        public Options(int port, int threadCount, boolean useSSL) {
             this.port = port;
             this.threadCount = threadCount;
+            this.useSSL = useSSL;
         }
     }
 
@@ -67,6 +69,7 @@ public class Server {
 
     public int port;
     public int threadCount;
+    public boolean useSSL;
     public Database db;
     public ArrayList<ClientHandler> handlers = new ArrayList<>();
     private Thread handlerCleaner;
@@ -84,6 +87,7 @@ public class Server {
     public static Options getOptions(String[] args) {
         int port = 1234;
         int threadCount = 10;
+        boolean useSSL = true;
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
@@ -97,11 +101,16 @@ public class Server {
                     threadCount = Integer.parseInt(args[i]);
                 }
 
+                case "--no-ssl" -> {
+                    i++;
+                    useSSL = false;
+                }
+
                 default -> throw new RuntimeException("Invalid option " + args[i]);
             }
         }
 
-        return new Options(port, threadCount);
+        return new Options(port, threadCount, useSSL);
     }
 
     public static void main(String[] args) throws NoSuchFieldException, IllegalAccessException, SQLException, IOException, ParseException {

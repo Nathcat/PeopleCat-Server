@@ -194,7 +194,9 @@ public class ClientHandler extends ConnectionHandler {
                     for (Field field : Message.class.getFields()) {
                         try {
                             msgData.put(field.getName(), field.get(msg));
-                        } catch (IllegalAccessException ignored) {}
+                        } catch (IllegalAccessException e) {
+                            handler.log("\033[91:3m" + e.getClass().getName() + ": " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
+                        }
                     }
 
                     response.add(
