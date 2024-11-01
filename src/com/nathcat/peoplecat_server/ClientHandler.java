@@ -65,23 +65,18 @@ public class ClientHandler extends ConnectionHandler {
 
                 // Assert that the packet data contains a username and password field
                 try {
-                    assert user.containsKey("Username");
-                    assert user.containsKey("Password");
+                    assert user.containsKey("username");
+                    assert user.containsKey("password");
                 } catch (AssertionError e) {
                     return new Packet[] {Packet.createError("Invalid JSON provided", "The data provided does not contain the correct data, an Auth request requires both the user's username and password to complete.")};
                 }
 
                 // Attempt to log in with AuthCat
-                JSONObject authCatJSON = new JSONObject();
-                authCatJSON.put("username", user.get("Username"));
-                authCatJSON.put("password", user.get("Password"));
-                authCatJSON.put("pre-hashed", "");
-
-                handler.log("To AuthCat: " + authCatJSON.toJSONString());
+                user.put("pre-hashed", "");
 
                 JSONObject authCatResponse;
                 try {
-                    authCatResponse = AuthCat.tryLogin(authCatJSON);
+                    authCatResponse = AuthCat.tryLogin(user);
                 } catch (InvalidResponse | IOException | InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -123,14 +118,9 @@ public class ClientHandler extends ConnectionHandler {
                 JSONObject request = packets[0].getData();
                 JSONObject[] users;
 
-                JSONObject ac_req = new JSONObject();
-                if (request.containsKey("ID")) ac_req.put("id", request.get("ID"));
-                else if (request.containsKey("Username")) ac_req.put("username", request.get("Username"));
-                else if (request.containsKey("FullName")) ac_req.put("fullName", request.get("FullName"));
-
                 JSONObject response;
                 try {
-                    response = AuthCat.userSearch(ac_req);
+                    response = AuthCat.userSearch(request);
                 } catch (InvalidResponse | IOException | InterruptedException e) {
                     throw new RuntimeException(e);
                 }
