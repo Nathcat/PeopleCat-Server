@@ -1,5 +1,6 @@
 package com.nathcat.peoplecat_server;
 
+import com.mysql.cj.xdevapi.Client;
 import nl.altindag.ssl.SSLFactory;
 import nl.altindag.ssl.pem.util.PemUtils;
 import org.java_websocket.WebSocket;
@@ -12,9 +13,11 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import javax.net.ssl.*;
+import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.sql.SQLException;
@@ -105,36 +108,28 @@ public class WebSocketHandler extends WebSocketServer {
 
     @Override
     public void onMessage(org.java_websocket.WebSocket webSocket, String s) {
-        // Try to pass the received packet to the relevant client handler,
-        // failing this, send an error packet with the error information
-        ClientHandler h = sockHandlerMap.get(webSocket);
-        h.log("Got packet from socket: " + s);
         try {
-            /*((WebSocketInputStream) h.inStream)
-                    .pushPacket(
-                            Packet.fromData(
-                                    (JSONObject) new JSONParser().parse(s)
-                            )
-                    );
-
-            h.log("Pushed packet to queue");*/
-
-            Packet p = Packet.fromData((JSONObject) new JSONParser().parse(s));
-            WebSocketInputStream is = (WebSocketInputStream) h.inStream;
-            is.pushPacket(p);
-
-            ArrayList<Packet> packetList = new ArrayList<>();
-            if (p.isFinal) {
-                while (is.available() > 0) {
-                    packetList.add(is.getNextPacket());
-                }
-            }
-
-            Packet[] response = h.packetHandler.handle(h, packetList.toArray(new Packet[0]));
-            ((WebSocketOutputStream) h.outStream).write(response);
-            h.log("Written response: " + Arrays.toString(response));
+            handlePacket(
+                    webSocket,
+                    Packet.fromData((JSONObject) new JSONParser().parse(s))
+            );
+        } catch (Exception e) {
+            ClientHandler h = sockHandlerMap.get(webSocket);
+            h.writePacket(Packet.createError(e.getClass().getName(), e.getMessage()));
+            h.log("Written error message: \033[91;3m" + e.getClass().getName() + ": " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
         }
-        catch (Exception e) {
+    }
+
+    @Override
+    public void onMessage(WebSocket conn, ByteBuffer message) {
+        ClientHandler h = sockHandlerMap.get(conn);
+        try {
+            handlePacket(
+                    conn,
+                    new Packet(new ByteArrayInputStream(message.array()))
+            );
+
+        } catch (Exception e) {
             h.writePacket(Packet.createError(e.getClass().getName(), e.getMessage()));
             h.log("Written error message: \033[91;3m" + e.getClass().getName() + ": " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
         }
@@ -166,5 +161,29 @@ Developed by Nathcat 2024""");
         Server.log("Running in websocket mode!");
 
         server.startCleaner(false);
+    }
+
+    public void handlePacket(WebSocket conn, Packet p) {
+        ClientHandler h = sockHandlerMap.get(conn);
+        h.log("Got packet from socket: " + p);
+        try {
+            WebSocketInputStream is = (WebSocketInputStream) h.inStream;
+            is.pushPacket(p);
+
+            ArrayList<Packet> packetList = new ArrayList<>();
+            if (p.isFinal) {
+                while (is.available() > 0) {
+                    packetList.add(is.getNextPacket());
+                }
+
+                Packet[] response = h.packetHandler.handle(h, packetList.toArray(new Packet[0]));
+                ((WebSocketOutputStream) h.outStream).write(response);
+                h.log("Written response: " + Arrays.toString(response));
+            }
+        }
+        catch (Exception e) {
+            h.writePacket(Packet.createError(e.getClass().getName(), e.getMessage()));
+            h.log("Written error message: \033[91;3m" + e.getClass().getName() + ": " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
+        }
     }
 }
