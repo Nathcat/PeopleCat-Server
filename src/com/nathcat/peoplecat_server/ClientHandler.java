@@ -45,7 +45,10 @@ public class ClientHandler extends ConnectionHandler {
         return new IPacketHandler() {
             @Override
             public Packet[] error(ConnectionHandler handler, Packet[] packets) {
-                return null;
+                JSONObject d = packets[0].getData();
+
+                handler.log("\033[91;3mError from client:\n" + d.get("name") + ":\n" + d.get("msg") + "\033[0m");
+                return new Packet[0];
             }
 
             @Override
@@ -194,7 +197,9 @@ public class ClientHandler extends ConnectionHandler {
                     for (Field field : Message.class.getFields()) {
                         try {
                             msgData.put(field.getName(), field.get(msg));
-                        } catch (IllegalAccessException ignored) {}
+                        } catch (IllegalAccessException e) {
+                            handler.log("\033[91:3m" + e.getClass().getName() + ": " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
+                        }
                     }
 
                     response.add(

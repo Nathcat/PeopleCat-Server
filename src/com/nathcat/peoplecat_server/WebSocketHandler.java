@@ -1,19 +1,23 @@
 package com.nathcat.peoplecat_server;
 
+import com.mysql.cj.xdevapi.Client;
 import nl.altindag.ssl.SSLFactory;
 import nl.altindag.ssl.pem.util.PemUtils;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
+import org.java_websocket.server.DefaultWebSocketServerFactory;
 import org.java_websocket.server.WebSocketServer;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import javax.net.ssl.*;
+import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.sql.SQLException;
@@ -33,45 +37,32 @@ public class WebSocketHandler extends WebSocketServer {
     public static void main(String[] args) throws SQLException, IOException, ParseException, NoSuchFieldException, IllegalAccessException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException {
         WebSocketHandler webSocketHandler = new WebSocketHandler(new Server(Server.getOptions(args)));
 
-        // Load SSL config file
-        JSONObject sslConfig;
-        try (FileInputStream fis = new FileInputStream("Assets/SSL_Config.json")) {
-            sslConfig = (JSONObject) new JSONParser().parse(new String(fis.readAllBytes()));
+        if (webSocketHandler.server.useSSL) {
+            // Load SSL config file
+            JSONObject sslConfig;
+            try (FileInputStream fis = new FileInputStream("Assets/SSL_Config.json")) {
+                sslConfig = (JSONObject) new JSONParser().parse(new String(fis.readAllBytes()));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            assert sslConfig != null;
+
+            KeyStore keyStore = KeyStore.getInstance("JKS");
+            keyStore.load(new FileInputStream("Assets/SSL/nathcat.net.keystore"), "changeit".toCharArray());
+            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            keyManagerFactory.init(keyStore, "changeit".toCharArray());
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(keyManagerFactory.getKeyManagers(), null, new SecureRandom());
+
+            // Start the server with the given SSL parameters
+            webSocketHandler.setWebSocketFactory(new DefaultSSLWebSocketServerFactory(sslContext));
         }
-        catch (Exception e) {
-            throw new RuntimeException(e);
+        else {
+            webSocketHandler.setWebSocketFactory(new DefaultWebSocketServerFactory());
+            webSocketHandler.server.log("\033[33;3mRunning in no-SSL mode!\033[0m");
         }
 
-        assert sslConfig != null;
-        /*
-        assert sslConfig.containsKey("certchain-path");
-        assert sslConfig.containsKey("privatekey-path");
-        assert sslConfig.containsKey("ca-path");
-
-        String certchain_path = (String) sslConfig.get("certchain-path");
-        String privatekey_path = (String) sslConfig.get("privatekey-path");
-        String ca_path = (String) sslConfig.get("ca-path");
-
-        // Get SSL certificates and keys
-        X509ExtendedKeyManager keyManager = PemUtils.loadIdentityMaterial(certchain_path, privatekey_path);
-        X509ExtendedTrustManager trustManager = PemUtils.loadTrustMaterial(ca_path);
-
-        SSLFactory sslFactory = SSLFactory.builder()
-                .withIdentityMaterial(keyManager)
-                .withTrustMaterial(trustManager)
-                .build();
-
-        SSLContext sslContext = sslFactory.getSslContext();*/
-
-        KeyStore keyStore = KeyStore.getInstance("JKS");
-        keyStore.load(new FileInputStream("Assets/SSL/nathcat.net.keystore"), "changeit".toCharArray());
-        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        keyManagerFactory.init(keyStore, "changeit".toCharArray());
-        SSLContext sslContext = SSLContext.getInstance("TLS");
-        sslContext.init(keyManagerFactory.getKeyManagers(), null, new SecureRandom());
-
-        // Start the server with the given SSL parameters
-        webSocketHandler.setWebSocketFactory(new DefaultSSLWebSocketServerFactory(sslContext));
         webSocketHandler.start();
     }
 
@@ -117,38 +108,30 @@ public class WebSocketHandler extends WebSocketServer {
 
     @Override
     public void onMessage(org.java_websocket.WebSocket webSocket, String s) {
-        // Try to pass the received packet to the relevant client handler,
-        // failing this, send an error packet with the error information
-        ClientHandler h = sockHandlerMap.get(webSocket);
-        h.log("Got packet from socket: " + s);
         try {
-            /*((WebSocketInputStream) h.inStream)
-                    .pushPacket(
-                            Packet.fromData(
-                                    (JSONObject) new JSONParser().parse(s)
-                            )
-                    );
-
-            h.log("Pushed packet to queue");*/
-
-            Packet p = Packet.fromData((JSONObject) new JSONParser().parse(s));
-            WebSocketInputStream is = (WebSocketInputStream) h.inStream;
-            is.pushPacket(p);
-
-            ArrayList<Packet> packetList = new ArrayList<>();
-            if (p.isFinal) {
-                while (is.available() > 0) {
-                    packetList.add(is.getNextPacket());
-                }
-            }
-
-            Packet[] response = h.packetHandler.handle(h, packetList.toArray(new Packet[0]));
-            ((WebSocketOutputStream) h.outStream).write(response);
-            h.log("Written response: " + Arrays.toString(response));
-        }
-        catch (Exception e) {
+            handlePacket(
+                    webSocket,
+                    Packet.fromData((JSONObject) new JSONParser().parse(s))
+            );
+        } catch (Exception e) {
+            ClientHandler h = sockHandlerMap.get(webSocket);
             h.writePacket(Packet.createError(e.getClass().getName(), e.getMessage()));
-            h.log("Written error message: \033[91;3m" + e.getClass().getName() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
+            h.log("Written error message: \033[91;3m" + e.getClass().getName() + ": " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
+        }
+    }
+
+    @Override
+    public void onMessage(WebSocket conn, ByteBuffer message) {
+        ClientHandler h = sockHandlerMap.get(conn);
+        try {
+            handlePacket(
+                    conn,
+                    new Packet(new ByteArrayInputStream(message.array()))
+            );
+
+        } catch (Exception e) {
+            h.writePacket(Packet.createError(e.getClass().getName(), e.getMessage()));
+            h.log("Written error message: \033[91;3m" + e.getClass().getName() + ": " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
         }
     }
 
@@ -178,5 +161,29 @@ Developed by Nathcat 2024""");
         Server.log("Running in websocket mode!");
 
         server.startCleaner(false);
+    }
+
+    public void handlePacket(WebSocket conn, Packet p) {
+        ClientHandler h = sockHandlerMap.get(conn);
+        h.log("Got packet from socket: " + p);
+        try {
+            WebSocketInputStream is = (WebSocketInputStream) h.inStream;
+            is.pushPacket(p);
+
+            ArrayList<Packet> packetList = new ArrayList<>();
+            if (p.isFinal) {
+                while (is.available() > 0) {
+                    packetList.add(is.getNextPacket());
+                }
+
+                Packet[] response = h.packetHandler.handle(h, packetList.toArray(new Packet[0]));
+                ((WebSocketOutputStream) h.outStream).write(response);
+                h.log("Written response: " + Arrays.toString(response));
+            }
+        }
+        catch (Exception e) {
+            h.writePacket(Packet.createError(e.getClass().getName(), e.getMessage()));
+            h.log("Written error message: \033[91;3m" + e.getClass().getName() + ": " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
+        }
     }
 }
