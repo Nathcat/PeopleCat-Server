@@ -45,7 +45,10 @@ public class ClientHandler extends ConnectionHandler {
         return new IPacketHandler() {
             @Override
             public Packet[] error(ConnectionHandler handler, Packet[] packets) {
-                return null;
+                JSONObject d = packets[0].getData();
+
+                handler.log("\033[91;3mError from client:\n" + d.get("name") + ":\n" + d.get("msg") + "\033[0m");
+                return new Packet[0];
             }
 
             @Override

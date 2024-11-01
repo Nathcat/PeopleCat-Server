@@ -11,30 +11,12 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 
 public class Test {
     public static void main(String[] args) throws Exception {
-        MessageStore s = new MessageStore();
-        MessageQueue queue = s.GetMessageQueue(1);
-
-        //queue.Push(new Message(1, 1, new Date().getTime(), "°"));
-
-        Message msg;
-        int i = 0;
-        while ((msg = queue.Get(i)) != null) {  // I really hate my old code ;_;
-            JSONObject msgData = new JSONObject();
-
-            for (Field field : Message.class.getFields()) {
-                try {
-                    msgData.put(field.getName(), field.get(msg));
-                } catch (IllegalAccessException ignored) {}
-            }
-
-            System.out.println(msgData.toJSONString());
-
-            i++;
-        }
+        System.out.println(Arrays.toString(Packet.createPing().getBytes()));
     }
 }
 

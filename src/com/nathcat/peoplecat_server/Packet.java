@@ -424,8 +424,10 @@ public class Packet {
             json.put("name", name);
             json.put("msg", msg);
 
-            dos.writeInt(json.toJSONString().length());
-            dos.write(json.toJSONString().getBytes());
+            byte[] s = json.toJSONString().getBytes(StandardCharsets.UTF_8);
+
+            dos.writeInt(s.length);
+            dos.write(s);
             dos.flush();
 
             byte[] payload = baos.toByteArray();
@@ -453,9 +455,9 @@ public class Packet {
         try {
             dos.writeInt(type);
             dos.writeBoolean(isFinal);
-            String s = payload.toJSONString();
-            dos.writeInt(s.length());
-            dos.write(s.getBytes());
+            byte[] s = payload.toJSONString().getBytes(StandardCharsets.UTF_8);
+            dos.writeInt(s.length);
+            dos.write(s);
             dos.flush();
 
             byte[] result = baos.toByteArray();

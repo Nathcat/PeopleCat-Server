@@ -124,6 +124,7 @@ public class WebSocketHandler extends WebSocketServer {
     public void onMessage(WebSocket conn, ByteBuffer message) {
         ClientHandler h = sockHandlerMap.get(conn);
         try {
+            h.log(Arrays.toString(message.array()));
             handlePacket(
                     conn,
                     new Packet(new ByteArrayInputStream(message.array()))
