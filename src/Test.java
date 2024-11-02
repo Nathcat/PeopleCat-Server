@@ -1,3 +1,6 @@
+import com.nathcat.messagecat_database.MessageQueue;
+import com.nathcat.messagecat_database.MessageStore;
+import com.nathcat.messagecat_database_entities.Message;
 import com.nathcat.peoplecat_server.ConnectionHandler;
 import com.nathcat.peoplecat_server.IPacketHandler;
 import com.nathcat.peoplecat_server.Packet;
@@ -5,14 +8,15 @@ import com.nathcat.peoplecat_server.Server;
 import org.json.simple.JSONObject;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 
 public class Test {
     public static void main(String[] args) throws Exception {
-        TestHandler t = new TestHandler();
-
-        while (true) {}
+        System.out.println(Arrays.toString(Packet.createPing().getBytes()));
     }
 }
 
