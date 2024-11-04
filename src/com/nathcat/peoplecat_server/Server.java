@@ -127,7 +127,6 @@ public class Server {
     /**
      * Starts the server
      * @throws IOException thrown by failing I/O operations
-     * @deprecated to be deprecated with the implementation of a new websocket library which will be used as the new primary method to accept connections
      */
     public void start() throws IOException {
         log("""
