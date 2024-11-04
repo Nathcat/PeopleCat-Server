@@ -16,7 +16,9 @@ import java.util.Date;
 
 public class Test {
     public static void main(String[] args) throws Exception {
-        System.out.println(Arrays.toString(Packet.createPing().getBytes()));
+        TestHandler t = new TestHandler();
+        t.setDaemon(true);
+        t.start();
     }
 }
 
@@ -82,7 +84,6 @@ class TestHandler extends ConnectionHandler {
 
             @Override
             public Packet[] changeProfilePicture(ConnectionHandler handler, Packet[] packets) {
-                System.out.println(packets[0] + " -> " + packets[0].getData());
                 return new Packet[0];
             }
 
@@ -90,20 +91,34 @@ class TestHandler extends ConnectionHandler {
             public Packet[] getActiveUserCount(ConnectionHandler handler, Packet[] packets) {
                 return new Packet[0];
             }
+
+            @Override
+            public Packet[] notificationUserOnline(ConnectionHandler handler, Packet[] packets) {
+                return new Packet[0];
+            }
+
+            @Override
+            public Packet[] notificationUserOffline(ConnectionHandler handler, Packet[] packets) {
+                return new Packet[0];
+            }
+
+            @Override
+            public Packet[] getFriends(ConnectionHandler handler, Packet[] packets) {
+                return new Packet[0];
+            }
+
+            @Override
+            public Packet[] friendRequest(ConnectionHandler handler, Packet[] packets) {
+                return new Packet[0];
+            }
         });
     }
 
     @Override
     public void run() {
-        try {
-            outStream.write("Not websock\r\n\r\n".getBytes());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
         JSONObject auth_packet = new JSONObject();
-        auth_packet.put("Username", "TestUsername");
-        auth_packet.put("Password", "1234");
+        auth_packet.put("username", "Nathcat");
+        auth_packet.put("password", "67a7e08c7087d963a0ec92ee6292b6b001a39f6049ed75727af948c0e4f6a4f5");
         writePacket(Packet.createPacket(Packet.TYPE_AUTHENTICATE, true, auth_packet));
 
         try {

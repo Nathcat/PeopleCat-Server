@@ -384,7 +384,7 @@ public class ClientHandler extends ConnectionHandler {
                     stmt.close();
 
                 } catch (SQLException e) {
-                    handler.log("\033[91;3mSQL error! " + e.getMessage());
+                    handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
                     return new Packet[] { Packet.createError("Database error", e.getMessage()) };
                 }
 
@@ -433,7 +433,7 @@ public class ClientHandler extends ConnectionHandler {
                         response = new Packet[] { Packet.createPacket(Packet.TYPE_FRIEND_REQUEST, true, r[0]) };
                     }
                     catch (SQLException e) {
-                        handler.log("\033[91;3mSQL error! " + e.getMessage());
+                        handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
                         return new Packet[] { Packet.createError("Database error", e.getMessage()) };
                     }
                 }
@@ -472,7 +472,7 @@ public class ClientHandler extends ConnectionHandler {
                         stmt.close();
                     }
                     catch (SQLException e) {
-                        handler.log("\033[91;3mSQL error! " + e.getMessage());
+                        handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
                         return new Packet[] { Packet.createError("Database error", e.getMessage()) };
                     }
 
@@ -515,7 +515,7 @@ public class ClientHandler extends ConnectionHandler {
                         response[response.length - 1].isFinal = true;
                     }
                     catch (SQLException e) {
-                        handler.log("\033[91;3mSQL error! " + e.getMessage());
+                        handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
                         return new Packet[] { Packet.createError("Database error", e.getMessage()) };
                     }
                 }
