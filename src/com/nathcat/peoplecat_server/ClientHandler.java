@@ -98,7 +98,31 @@ public class ClientHandler extends ConnectionHandler {
                 ClientHandler ch = (ClientHandler) handler;
                 ch.server.userToHandler.put((int) handler.user.get("id"), (ClientHandler) handler);
 
+                try {
+                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT follower FROM Friends WHERE id = ?");
+                    stmt.setInt(1, (int) handler.user.get("id"));
+                    stmt.execute();
+                    JSONObject[] r = Database.extractResultSet(stmt.getResultSet());
+                    JSONObject user_notif_data = new JSONObject();
+                    user_notif_data.putAll(handler.user);
+                    user_notif_data.remove("password");
+                    user_notif_data.remove("verified");
+                    user_notif_data.remove("email");
 
+                    for (JSONObject jsonObject : r) {
+                        ClientHandler h = server.userToHandler.get((int) jsonObject.get("follower"));
+                        h.writePacket(
+                                Packet.createPacket(
+                                        Packet.TYPE_NOTIFICATION_USER_ONLINE,
+                                        true,
+                                        user_notif_data
+                                )
+                        );
+                    }
+                }
+                catch (SQLException e) {
+                    handler.log("\033[91;3mSQL error! " + e.getMessage());
+                }
 
                 return new Packet[] {Packet.createPacket(
                         Packet.TYPE_AUTHENTICATE,
@@ -561,6 +585,34 @@ public class ClientHandler extends ConnectionHandler {
     public void close() {
         super.close();
 
-        if (authenticated) server.userToHandler.remove((int) user.get("id"));
+        if (authenticated) {
+            server.userToHandler.remove((int) user.get("id"));
+
+            try {
+                PreparedStatement stmt = server.db.getPreparedStatement("SELECT follower FROM Friends WHERE id = ?");
+                stmt.setInt(1, (int) user.get("id"));
+                stmt.execute();
+                JSONObject[] r = Database.extractResultSet(stmt.getResultSet());
+                JSONObject user_notif_data = new JSONObject();
+                user_notif_data.putAll(user);
+                user_notif_data.remove("password");
+                user_notif_data.remove("verified");
+                user_notif_data.remove("email");
+
+                for (JSONObject jsonObject : r) {
+                    ClientHandler h = server.userToHandler.get((int) jsonObject.get("follower"));
+                    h.writePacket(
+                            Packet.createPacket(
+                                    Packet.TYPE_NOTIFICATION_USER_OFFLINE,
+                                    true,
+                                    user_notif_data
+                            )
+                    );
+                }
+            }
+            catch (SQLException e) {
+                log("\033[91;3mSQL error! " + e.getMessage());
+            }
+        }
     }
 }
