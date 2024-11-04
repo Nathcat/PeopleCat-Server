@@ -283,6 +283,140 @@ public class Packet {
     public static final int TYPE_GET_ACTIVE_USER_COUNT = 11;
 
     /**
+     * <h3>Purpose</h3>
+     * <p>
+     *     Alerts the receiver that the specified user has just come online.
+     * </p>
+     * <p>
+     *     Note that this should only ever be sent from the server to the client,
+     *     the same as other notification packets.
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "id": Integer,
+     *         "username": String,
+     *         "fullName": String,
+     *         "pfpPath": String
+     *     }
+     * </pre>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     Should not respond to this packet.
+     * </p>
+     */
+    public static final int TYPE_NOTIFICATION_USER_ONLINE = 12;
+
+    /**
+     * <h3>Purpose</h3>
+     * <p>
+     *     Alerts the receiver that the specified user has just gone offline.
+     * </p>
+     * <p>
+     *     Note that this should only ever be sent from the server to the client,
+     *     the same as other notification packets.
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "id": Integer,
+     *         "username": String,
+     *         "fullName": String,
+     *         "pfpPath": String
+     *     }
+     * </pre>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     Should not respond to this packet.
+     * </p>
+     */
+    public static final int TYPE_NOTIFICATION_USER_OFFLINE = 13;
+
+    /**
+     * <h3>Purpose</h3>
+     * <p>
+     *     Get a list of the currently authenticated user's friends.
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <p>
+     *     No payload is required for this request.
+     * </p>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     Server will reply with a sequence of packets specifying the basic information of the authenticated user's
+     *     friends, each packet will contain one user.
+     * </p>
+     * <p>
+     *     This is the same as the get user request response format, but will be under the get friends packet type.
+     * </p>
+     */
+    public static final int TYPE_GET_FRIENDS = 14;
+
+    /**
+     * <h3>Purpose</h3>
+     * <p>
+     *     Manipulate a user's friend requests. This includes actions such as sending, and accepting / declining
+     * </p>
+     * <p>
+     *     Note that the server will send a packet to the client under this type when a friend request is sent to the
+     *     user that client is logged in as, such a packet will contain the following payload format detailing the
+     *     information of the user that sent the request.
+     * </p>
+     * <pre>
+     *     {
+     *         "id": Integer
+     *         "username": String
+     *         "fullName": String
+     *         "pfpPath": String
+     *     }
+     * </pre>
+     *
+     * <h3>Payload format</h3>
+     * <p>
+     *     This packet type has a conditional payload, but must always contain the <code>"action"</code> field:
+     * </p>
+     * <pre>
+     *     {
+     *         "action": String -> "SEND", "ACCEPT", "DECLINE",
+     *         <code>IF "action" = "SEND" THEN:</code>
+     *         "recipient": Integer,
+     *         <code>OR IF "action" = "ACCEPT" OR "DECLINE" THEN:</code>
+     *         "id": Integer
+     *         <code>OR IF "action" = "GET" THEN NONE REQUIRED</code>
+     *     }
+     * </pre>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     If <code>"action" = "SEND"</code> in the request, then the response is of this format:
+     * </p>
+     * <pre>
+     *     {
+     *         "id": Integer
+     *     }
+     * </pre>
+     * <p>
+     *     If <code>"action" = "GET"</code>, then a sequence of packets is supplied, each with the payload:
+     * </p>
+     * <pre>
+     *     {
+     *         "id": Integer,
+     *         "sender": Integer
+     *     }
+     * </pre>
+     * <p>
+     *     Otherwise, there is no response beside error messages.
+     * </p>
+     */
+    public static final int TYPE_FRIEND_REQUEST = 15;
+
+    /**
      * The type of request specified by the packet
      */
     public int type;

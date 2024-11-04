@@ -10,6 +10,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 
 public class Server {
@@ -72,6 +73,10 @@ public class Server {
     public boolean useSSL;
     public Database db;
     public ArrayList<ClientHandler> handlers = new ArrayList<>();
+    /**
+     * Maps a user's ID to their connected handler
+     */
+    public HashMap<Integer, ClientHandler> userToHandler = new HashMap<>();
     private Thread handlerCleaner;
 
 
