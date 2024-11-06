@@ -66,6 +66,34 @@ public class ClientHandler extends ConnectionHandler {
                 // Get the data from the single packet
                 JSONObject user = packets[0].getData();
 
+                if (user.containsKey("cookie-auth")) {
+                    String cookie = (String) user.get("cookie-auth");
+                    JSONObject r;
+                    try {
+                        r = AuthCat.loginWithCookie(cookie);
+
+                    } catch (IOException | InterruptedException | InvalidResponse e) {
+                        throw new RuntimeException(e);
+                    }
+
+                    if (r == null) {
+                        return new Packet[] {Packet.createError("Auth failed", "Invalid session!")};
+                    }
+                    else {
+                        handler.authenticated = true;
+                        handler.user = r;
+                        handler.user.put("id", Math.toIntExact((long) handler.user.get("id")));
+                        ClientHandler ch = (ClientHandler) handler;
+                        ch.server.userToHandler.put((int) handler.user.get("id"), (ClientHandler) handler);
+
+                        return new Packet[] {Packet.createPacket(
+                                Packet.TYPE_AUTHENTICATE,
+                                true,
+                                handler.user
+                        )};
+                    }
+                }
+
                 // Assert that the packet data contains a username and password field
                 try {
                     assert user.containsKey("username");

@@ -17,8 +17,8 @@ import java.util.Date;
 public class Test {
     public static void main(String[] args) throws Exception {
         TestHandler t = new TestHandler();
-        t.setDaemon(true);
-        t.start();
+
+        while (true) {}
     }
 }
 
@@ -111,14 +111,18 @@ class TestHandler extends ConnectionHandler {
             public Packet[] friendRequest(ConnectionHandler handler, Packet[] packets) {
                 return new Packet[0];
             }
+
+            @Override
+            public Packet[] getServerInfo(ConnectionHandler handler, Packet[] packets) {
+                return new Packet[0];
+            }
         });
     }
 
     @Override
     public void run() {
         JSONObject auth_packet = new JSONObject();
-        auth_packet.put("username", "Nathcat");
-        auth_packet.put("password", "67a7e08c7087d963a0ec92ee6292b6b001a39f6049ed75727af948c0e4f6a4f5");
+        auth_packet.put("cookie-auth", "cpkjs5inil4mr6ooprvmqr4vj4");
         writePacket(Packet.createPacket(Packet.TYPE_AUTHENTICATE, true, auth_packet));
 
         try {

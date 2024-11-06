@@ -59,6 +59,17 @@ public class Packet {
      *         "password": String
      *     }
      * </pre>
+     * <p>
+     *     Or you might wish to authenticate with an AuthCat cookie:
+     * </p>
+     * <pre>
+     *     {
+     *         "cookie-auth": String
+     *     }
+     * </pre>
+     * <p>
+     *     Where the <code>cookie-auth</code> string is the value of the <code>AuthCat-SSO</code> cookie.
+     * </p>
      * <h3>Response Format</h3>
      * <pre>
      *     {

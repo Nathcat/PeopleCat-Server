@@ -68,6 +68,32 @@ public class AuthCat {
         }
     }
 
+    public static JSONObject loginWithCookie(String cookie) throws IOException, InterruptedException, InvalidResponse {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://data.nathcat.net/sso/get-session.php"))
+                .setHeader("Cookie", "AuthCat-SSO=" + cookie)
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() == 200) {
+            String body = response.body();
+
+            if (body.contentEquals("[]")) return null;
+
+            try {
+                return (JSONObject) ((JSONObject) new JSONParser().parse(body)).get("user");
+            }
+            catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        else {
+            throw new InvalidResponse(response.statusCode());
+        }
+    }
+
     /**
      * Call the user search service
      * @param searchData The JSON search data, must contain either a username field, or a fullName field, or both
