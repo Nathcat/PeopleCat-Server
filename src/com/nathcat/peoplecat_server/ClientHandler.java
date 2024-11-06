@@ -531,7 +531,7 @@ public class ClientHandler extends ConnectionHandler {
                 JSONObject d = new JSONObject();
                 d.put("version", Server.version);
                 d.put("server-time", new Date().toString());
-                
+
                 return new Packet[] { Packet.createPacket(
                         Packet.TYPE_GET_SERVER_INFO,
                         true,
