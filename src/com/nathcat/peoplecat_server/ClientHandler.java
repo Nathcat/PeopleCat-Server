@@ -525,6 +525,19 @@ public class ClientHandler extends ConnectionHandler {
 
                 return response;
             }
+
+            @Override
+            public Packet[] getServerInfo(ConnectionHandler handler, Packet[] packets) {
+                JSONObject d = new JSONObject();
+                d.put("version", Server.version);
+                d.put("server-time", new Date().toString());
+                
+                return new Packet[] { Packet.createPacket(
+                        Packet.TYPE_GET_SERVER_INFO,
+                        true,
+                        d
+                )};
+            }
         };
     }
 

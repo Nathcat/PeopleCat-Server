@@ -433,6 +433,26 @@ public class Packet {
     public static final int TYPE_FRIEND_REQUEST = 15;
 
     /**
+     * <p>Since version 4.0.0</p>
+     * <h3>Purpose</h3>
+     * <p>
+     *     Get information about the current version of the server
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <p>No payload required</p>
+     *
+     * <h3>Response format</h3>
+     * <pre>
+     *     {
+     *         "version": String,
+     *         "server-time": String,
+     *     }
+     * </pre>
+     */
+    public static final int TYPE_GET_SERVER_INFO = 16;
+
+    /**
      * The type of request specified by the packet
      */
     public int type;
