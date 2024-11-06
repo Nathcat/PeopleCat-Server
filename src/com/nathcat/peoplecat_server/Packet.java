@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
  */
 public class Packet {
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Description</h3>
      * <p>Used to signify that an error has occurred, the payload provides information about this error.</p>
      * <h3>Payload Format</h3>
@@ -38,6 +39,7 @@ public class Packet {
      */
     public static final int TYPE_ERROR = 0;
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Description</h3>
      * <p>An empty packet</p>
      * <h3>Payload Format</h3>
@@ -47,6 +49,7 @@ public class Packet {
      */
     public static final int TYPE_PING = 1;
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>A packet of this type will be interpreted as an authentication request.</p>
      * <h3>Payload Format</h3>
@@ -71,6 +74,7 @@ public class Packet {
      */
     public static final int TYPE_AUTHENTICATE = 2;
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>Creates a new user with the data specified in the payload.</p>
      * <h3>Payload format</h3>
@@ -97,6 +101,7 @@ public class Packet {
      */
     public static final int TYPE_CREATE_NEW_USER = 3;
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>Inform the server that the client is closing the connection</p>
      * <h3>Payload format</h3>
@@ -106,6 +111,7 @@ public class Packet {
      */
     public static final int TYPE_CLOSE = 4;
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>Request user data from the database. Passwords will be removed from the response.</p>
      * <h3>Payload format</h3>
@@ -141,6 +147,7 @@ public class Packet {
     public static final int TYPE_GET_USER = 5;
 
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     Request a list of messages in a given chat. If this chat is encrypted then the messages received will be in
@@ -166,6 +173,7 @@ public class Packet {
     public static final int TYPE_GET_MESSAGE_QUEUE = 6;
 
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     Send a message into a chat.
@@ -186,6 +194,7 @@ public class Packet {
     public static final int TYPE_SEND_MESSAGE = 7;
 
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     This is to be sent from the server to the connected client applications, it tells the client that they have
@@ -207,6 +216,7 @@ public class Packet {
     public static final int TYPE_NOTIFICATION_MESSAGE = 8;
 
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     This message indicates that a client wishes to join a chat.
@@ -237,6 +247,7 @@ public class Packet {
     public static final int TYPE_JOIN_CHAT = 9;
 
     /**
+     * <p>Since version 1.1.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     This indicates a request to change the profile picture of the currently authenticated user.
@@ -263,6 +274,7 @@ public class Packet {
     public static final int TYPE_CHANGE_PFP_PATH = 10;
 
     /**
+     * <p>Since version 2.1.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     Get the number of users currently online
@@ -283,6 +295,7 @@ public class Packet {
     public static final int TYPE_GET_ACTIVE_USER_COUNT = 11;
 
     /**
+     * <p>Since version 4.0.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     Alerts the receiver that the specified user has just come online.
@@ -310,6 +323,7 @@ public class Packet {
     public static final int TYPE_NOTIFICATION_USER_ONLINE = 12;
 
     /**
+     * <p>Since version 4.0.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     Alerts the receiver that the specified user has just gone offline.
@@ -337,6 +351,7 @@ public class Packet {
     public static final int TYPE_NOTIFICATION_USER_OFFLINE = 13;
 
     /**
+     * <p>Since version 4.0.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     Get a list of the currently authenticated user's friends.
@@ -359,6 +374,7 @@ public class Packet {
     public static final int TYPE_GET_FRIENDS = 14;
 
     /**
+     * <p>Since version 4.0.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     Manipulate a user's friend requests. This includes actions such as sending, and accepting / declining
