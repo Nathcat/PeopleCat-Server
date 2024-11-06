@@ -10,6 +10,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 
 public class Server {
@@ -65,13 +66,17 @@ public class Server {
         }
     }
 
-    public static final String version = "3.0.0";
+    public static final String version = "4.0.0";
 
     public int port;
     public int threadCount;
     public boolean useSSL;
     public Database db;
     public ArrayList<ClientHandler> handlers = new ArrayList<>();
+    /**
+     * Maps a user's ID to their connected handler
+     */
+    public HashMap<Integer, ClientHandler> userToHandler = new HashMap<>();
     private Thread handlerCleaner;
 
 
@@ -122,7 +127,6 @@ public class Server {
     /**
      * Starts the server
      * @throws IOException thrown by failing I/O operations
-     * @deprecated to be deprecated with the implementation of a new websocket library which will be used as the new primary method to accept connections
      */
     public void start() throws IOException {
         log("""

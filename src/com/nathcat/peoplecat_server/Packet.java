@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
  */
 public class Packet {
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Description</h3>
      * <p>Used to signify that an error has occurred, the payload provides information about this error.</p>
      * <h3>Payload Format</h3>
@@ -38,6 +39,7 @@ public class Packet {
      */
     public static final int TYPE_ERROR = 0;
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Description</h3>
      * <p>An empty packet</p>
      * <h3>Payload Format</h3>
@@ -47,6 +49,7 @@ public class Packet {
      */
     public static final int TYPE_PING = 1;
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>A packet of this type will be interpreted as an authentication request.</p>
      * <h3>Payload Format</h3>
@@ -71,6 +74,7 @@ public class Packet {
      */
     public static final int TYPE_AUTHENTICATE = 2;
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>Creates a new user with the data specified in the payload.</p>
      * <h3>Payload format</h3>
@@ -97,6 +101,7 @@ public class Packet {
      */
     public static final int TYPE_CREATE_NEW_USER = 3;
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>Inform the server that the client is closing the connection</p>
      * <h3>Payload format</h3>
@@ -106,6 +111,7 @@ public class Packet {
      */
     public static final int TYPE_CLOSE = 4;
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>Request user data from the database. Passwords will be removed from the response.</p>
      * <h3>Payload format</h3>
@@ -141,6 +147,7 @@ public class Packet {
     public static final int TYPE_GET_USER = 5;
 
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     Request a list of messages in a given chat. If this chat is encrypted then the messages received will be in
@@ -166,6 +173,7 @@ public class Packet {
     public static final int TYPE_GET_MESSAGE_QUEUE = 6;
 
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     Send a message into a chat.
@@ -186,6 +194,7 @@ public class Packet {
     public static final int TYPE_SEND_MESSAGE = 7;
 
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     This is to be sent from the server to the connected client applications, it tells the client that they have
@@ -207,6 +216,7 @@ public class Packet {
     public static final int TYPE_NOTIFICATION_MESSAGE = 8;
 
     /**
+     * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     This message indicates that a client wishes to join a chat.
@@ -237,6 +247,7 @@ public class Packet {
     public static final int TYPE_JOIN_CHAT = 9;
 
     /**
+     * <p>Since version 1.1.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     This indicates a request to change the profile picture of the currently authenticated user.
@@ -263,6 +274,7 @@ public class Packet {
     public static final int TYPE_CHANGE_PFP_PATH = 10;
 
     /**
+     * <p>Since version 2.1.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     Get the number of users currently online
@@ -281,6 +293,164 @@ public class Packet {
      * </p>
      */
     public static final int TYPE_GET_ACTIVE_USER_COUNT = 11;
+
+    /**
+     * <p>Since version 4.0.0</p>
+     * <h3>Purpose</h3>
+     * <p>
+     *     Alerts the receiver that the specified user has just come online.
+     * </p>
+     * <p>
+     *     Note that this should only ever be sent from the server to the client,
+     *     the same as other notification packets.
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "id": Integer,
+     *         "username": String,
+     *         "fullName": String,
+     *         "pfpPath": String
+     *     }
+     * </pre>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     Should not respond to this packet.
+     * </p>
+     */
+    public static final int TYPE_NOTIFICATION_USER_ONLINE = 12;
+
+    /**
+     * <p>Since version 4.0.0</p>
+     * <h3>Purpose</h3>
+     * <p>
+     *     Alerts the receiver that the specified user has just gone offline.
+     * </p>
+     * <p>
+     *     Note that this should only ever be sent from the server to the client,
+     *     the same as other notification packets.
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "id": Integer,
+     *         "username": String,
+     *         "fullName": String,
+     *         "pfpPath": String
+     *     }
+     * </pre>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     Should not respond to this packet.
+     * </p>
+     */
+    public static final int TYPE_NOTIFICATION_USER_OFFLINE = 13;
+
+    /**
+     * <p>Since version 4.0.0</p>
+     * <h3>Purpose</h3>
+     * <p>
+     *     Get a list of the currently authenticated user's friends.
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <p>
+     *     No payload is required for this request.
+     * </p>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     Server will reply with a sequence of packets specifying the basic information of the authenticated user's
+     *     friends, each packet will contain one user.
+     * </p>
+     * <p>
+     *     This is the same as the get user request response format, but will be under the get friends packet type.
+     * </p>
+     */
+    public static final int TYPE_GET_FRIENDS = 14;
+
+    /**
+     * <p>Since version 4.0.0</p>
+     * <h3>Purpose</h3>
+     * <p>
+     *     Manipulate a user's friend requests. This includes actions such as sending, and accepting / declining
+     * </p>
+     * <p>
+     *     Note that the server will send a packet to the client under this type when a friend request is sent to the
+     *     user that client is logged in as, such a packet will contain the following payload format detailing the
+     *     information of the user that sent the request.
+     * </p>
+     * <pre>
+     *     {
+     *         "id": Integer
+     *         "username": String
+     *         "fullName": String
+     *         "pfpPath": String
+     *     }
+     * </pre>
+     *
+     * <h3>Payload format</h3>
+     * <p>
+     *     This packet type has a conditional payload, but must always contain the <code>"action"</code> field:
+     * </p>
+     * <pre>
+     *     {
+     *         "action": String -> "SEND", "ACCEPT", "DECLINE",
+     *         <code>IF "action" = "SEND" THEN:</code>
+     *         "recipient": Integer,
+     *         <code>OR IF "action" = "ACCEPT" OR "DECLINE" THEN:</code>
+     *         "id": Integer
+     *         <code>OR IF "action" = "GET" THEN NONE REQUIRED</code>
+     *     }
+     * </pre>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     If <code>"action" = "SEND"</code> in the request, then the response is of this format:
+     * </p>
+     * <pre>
+     *     {
+     *         "id": Integer
+     *     }
+     * </pre>
+     * <p>
+     *     If <code>"action" = "GET"</code>, then a sequence of packets is supplied, each with the payload:
+     * </p>
+     * <pre>
+     *     {
+     *         "id": Integer,
+     *         "sender": Integer
+     *     }
+     * </pre>
+     * <p>
+     *     Otherwise, there is no response beside error messages.
+     * </p>
+     */
+    public static final int TYPE_FRIEND_REQUEST = 15;
+
+    /**
+     * <p>Since version 4.0.0</p>
+     * <h3>Purpose</h3>
+     * <p>
+     *     Get information about the current version of the server
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <p>No payload required</p>
+     *
+     * <h3>Response format</h3>
+     * <pre>
+     *     {
+     *         "version": String,
+     *         "server-time": String,
+     *     }
+     * </pre>
+     */
+    public static final int TYPE_GET_SERVER_INFO = 16;
 
     /**
      * The type of request specified by the packet
