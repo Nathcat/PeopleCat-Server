@@ -76,10 +76,7 @@ public class ClientHandler extends ConnectionHandler {
                         throw new RuntimeException(e);
                     }
 
-                    if (r == null) {
-                        return new Packet[] {Packet.createError("Auth failed", "Invalid session!")};
-                    }
-                    else {
+                    if (r != null) {
                         handler.authenticated = true;
                         handler.user = r;
                         handler.user.put("id", Math.toIntExact((long) handler.user.get("id")));
@@ -92,6 +89,9 @@ public class ClientHandler extends ConnectionHandler {
                                 handler.user
                         )};
                     }
+
+                    // If we get here, then cookie authentication has failed, and we will attempt normal credential
+                    // authentication.
                 }
 
                 // Assert that the packet data contains a username and password field
