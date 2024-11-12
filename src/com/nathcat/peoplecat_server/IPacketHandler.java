@@ -173,6 +173,7 @@ public interface IPacketHandler {
             case Packet.TYPE_NOTIFICATION_USER_OFFLINE -> notificationUserOffline(handler, packets);
             case Packet.TYPE_GET_FRIENDS -> getFriends(handler, packets);
             case Packet.TYPE_FRIEND_REQUEST -> friendRequest(handler, packets);
+            case Packet.TYPE_GET_SERVER_INFO -> getServerInfo(handler, packets);
 
             default -> throw new IllegalStateException("Unexpected value: " + packets[0].type);
         };
