@@ -103,8 +103,6 @@ public class ClientHandler extends ConnectionHandler {
                 }
 
                 // Attempt to log in with AuthCat
-                user.put("pre-hashed", "");
-
                 JSONObject authCatResponse;
                 try {
                     authCatResponse = AuthCat.tryLogin(user);
