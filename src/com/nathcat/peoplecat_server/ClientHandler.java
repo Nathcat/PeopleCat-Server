@@ -7,6 +7,8 @@ import com.nathcat.messagecat_database_entities.Message;
 import com.nathcat.peoplecat_database.Database;
 import org.java_websocket.WebSocket;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -15,6 +17,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 
 /**
@@ -147,7 +150,7 @@ public class ClientHandler extends ConnectionHandler {
                     }
                 }
                 catch (SQLException e) {
-                    handler.log("\033[91;3mSQL error! " + e.getMessage());
+                    handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
                 }
 
                 return new Packet[] {Packet.createPacket(
@@ -244,28 +247,36 @@ public class ClientHandler extends ConnectionHandler {
                 }
 
                 ArrayList<Packet> response = new ArrayList<>();
+                ArrayList<JSONObject> messages = new ArrayList<>();
                 Message msg;
                 int i = 0;
-                while ((msg = queue.Get(i)) != null) {  // I really hate my old code ;_;
-                    JSONObject msgData = new JSONObject();
-
-                    for (Field field : Message.class.getFields()) {
+                while ((msg = queue.Get(i)) != null) {
+                    JSONObject m = new JSONObject();
+                    for (Field f : msg.getClass().getFields()) {
                         try {
-                            msgData.put(field.getName(), field.get(msg));
-                        } catch (IllegalAccessException e) {
-                            handler.log("\033[91:3m" + e.getClass().getName() + ": " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
-                        }
+                            m.put(f.getName(), f.get(msg));
+                        } catch (Exception ignored) {}
                     }
 
-                    response.add(
-                            Packet.createPacket(
-                                    Packet.TYPE_GET_MESSAGE_QUEUE,
-                                    false,
-                                    msgData
-                            )
-                    );
-
+                    messages.add(m);
                     i++;
+                }
+
+                JSONObject preResponse = new JSONObject();
+                preResponse.put("message-count", messages.size());
+
+                response.add(Packet.createPacket(
+                        Packet.TYPE_GET_MESSAGE_QUEUE,
+                        false,
+                        preResponse
+                ));
+
+                for (JSONObject m : messages) {
+                    response.add(Packet.createPacket(
+                            Packet.TYPE_GET_MESSAGE_QUEUE,
+                            false,
+                            m
+                    ));
                 }
 
                 if (response.isEmpty()) {

@@ -180,7 +180,23 @@ public class Packet {
      *     }
      * </pre>
      * <h3>Response format</h3>
-     * <p>Multiple packets will be sent, each containing one message in the following format, under TYPE_GET_MESSAGE_QUEUE:</p>
+     * <p>
+     *     The server will respond with a sequence of packets, each containing the data for one message in the chat.
+     *     However before this, from version 4.1.2, one packet will be sent containing the following payload:
+     * </p>
+     * <pre>
+     *     {
+     *         "message-count": Integer
+     *     }
+     * </pre>
+     * <p>
+     *     Which will give the number of messages in the chat. This, and all following packets will be sent under the
+     *     type TYPE_GET_MESSAGE_QUEUE. Server versions prior to 4.1.2 will not send the first packet and just send the
+     *     packet sequence.
+     * </p>
+     * <p>
+     *     The format of all packets following the above will be:
+     * </p>
      * <pre>
      *     {
      *         "ChatID": Int,
@@ -189,6 +205,9 @@ public class Packet {
      *         "TimeSent": Long
      *     }
      * </pre>
+     * <p>
+     *     With the last packet specifying <code>isFinal = true</code>.
+     * </p>
      */
     public static final int TYPE_GET_MESSAGE_QUEUE = 6;
 
