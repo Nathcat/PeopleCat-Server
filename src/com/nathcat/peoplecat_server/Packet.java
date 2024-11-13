@@ -82,13 +82,13 @@ public class Packet {
      * <h3>Response Format</h3>
      * <pre>
      *     {
-     *         "ID": Int,
+     *         "id": Int,
      *         "username": String,
-     *         "display_name": String,
+     *         "fullName": String,
      *         "password": String,
-     *         "time_created": Long,
-     *         "pfp_path": String,
-     *         "cover_pic_path": String
+     *         "pfpPath": String,
+     *         "verified": Boolean,
+     *         "passwordUpdated": Boolean
      *     }
      * </pre>
      */
@@ -117,7 +117,8 @@ public class Packet {
      *         "cover_pic_path": String
      *     }
      * </pre>
-     * @deprecated This will be delegated to AuthCat and no longer handled by PeopleCat
+     * @deprecated This will be delegated to AuthCat and no longer handled by PeopleCat, Server will reject packets
+     *             of this type.
      */
     public static final int TYPE_CREATE_NEW_USER = 3;
     /**
@@ -134,35 +135,47 @@ public class Packet {
      * <p>Since version 1.0.0</p>
      * <h3>Purpose</h3>
      * <p>Request user data from the database. Passwords will be removed from the response.</p>
+     * <p>
+     *     <b><i>With the AuthCat integration, it is recommended that clients go straight to AuthCat for user
+     *     searches. Documentation for this process can be found <a href="https://github.com/Nathcat/data.nathcat.net/blob/main/sso/docs/AuthCat.md">here</a></i></b>
+     * </p>
      * <h3>Payload format</h3>
-     * <pre>
-     *      {
-     *          "ID": Int,
-     *          "username": String,
-     *          "display_name": String,
-     *      }
-     * </pre>
-     * <p>Only one parameter needs to be specified, if multiple are given the following rules are applied to determine which one is used:</p>
-     * <ol>
-     *     <li>If ID is specified, search for the user with this ID.</li>
-     *     <li>If ID is <i>not</i> specified, but username is specified, search for all users with a username which begins with the string given.</li>
-     *     <li>If neither ID nor username is specified, then display_name <i>must</i> be specified, so search for all users with a display_name which begins with the string given.</li>
-     * </ol>
-     *
-     * <h3>Response format</h3>
-     * <p>If there is at least one user which meets the criteria, each packet in the sequence has the following format.</p>
+     * <p>
+     *     The data required by this request is the same as is required by AuthCat's user search feature, i.e. you may
+     *     request a user's public data by providing one of the following payloads.
+     * </p>
+     * <h4>Request by user ID</h4>
      * <pre>
      *     {
-     *         "ID": Int,
-     *         "username": String,
-     *         "display_name": String,
-     *         "password": String,
-     *         "time_created": Long,
-     *         "pfp_path": String,
-     *         "cover_pic_path": String
+     *         "id": Integer
      *     }
      * </pre>
-     * <p>If there are no users which match, a packet with no payload is sent.</p>
+     * <h4>Request by username search</h4>
+     * <pre>
+     *     {
+     *         "username": String
+     *     }
+     * </pre>
+     * <p>
+     *     Note that AuthCat appends a "%" to the end of the provided username, so it will return all users which have
+     *     a username <i>which starts with</i> the provided username.
+     * </p>
+     * <h4>Request by full name search</h4>
+     * <pre>
+     *     {
+     *         "fullName": String
+     *     }
+     * </pre>
+     * <p>
+     *     Note that AuthCat appends a "%" to the end of the provided name, so it will return all users which have
+     *     a name <i>which starts with</i> the provided name.
+     * </p>
+     * <h4>Combining searches</h4>
+     * <p>
+     *     You may search for <i>both</i> a username and full name at the same time, this will return the same results
+     *     as if you did them individually, but if the <code>id</code> field is specified, AuthCat will <i>only search
+     *     by the provided <code>id</code></i>, and will ignore any other provided information.
+     * </p>
      */
     public static final int TYPE_GET_USER = 5;
 
@@ -308,7 +321,8 @@ public class Packet {
      *     The server will either respond with a packet with an empty payload under the type TYPE_CHANGE_PFP_PATH
      *     to indicate success, or it will reply with an error packet to indicate failure.
      * </p>
-     * @deprecated This will be delegated to AuthCat and no longer handled by PeopleCat
+     * @deprecated This will be delegated to AuthCat and no longer handled by PeopleCat. The server will reject packets
+     *             of this type.
      */
     public static final int TYPE_CHANGE_PFP_PATH = 10;
 
