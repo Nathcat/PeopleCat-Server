@@ -309,6 +309,7 @@ public class ClientHandler extends ConnectionHandler {
                 notification.put("title", "New message");
                 notification.put("message", "You have a new message from ");
                 notification.put("ChatID", chatID);
+                notification.put("Message", msg.GetJSONObject().toJSONString());
                 Packet notifyPacket = Packet.createPacket(Packet.TYPE_NOTIFICATION_MESSAGE, true, notification);
                 for (int userID : server.db.chatMemberships.get(chatID)) {
                     if (userID == (int) handler.user.get("id")) {

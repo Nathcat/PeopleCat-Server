@@ -258,7 +258,13 @@ public class Packet {
      *     {
      *         "title": String,
      *         "message": String,
-     *         "ChatID": Int
+     *         "ChatID": Int,
+     *         "Message": {
+     *              "ChatID": Int,
+     *              "Content" String,
+     *              "SenderID": Int,
+     *              "TimeSent": Long
+     *         }
      *     }
      * </pre>
      *
