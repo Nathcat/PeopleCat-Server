@@ -259,6 +259,7 @@ public class Packet {
      *         "title": String,
      *         "message": String,
      *         "ChatID": Int,
+     *         // "Message" field only included since server v4.1.3
      *         "Message": {
      *              "ChatID": Int,
      *              "Content" String,
