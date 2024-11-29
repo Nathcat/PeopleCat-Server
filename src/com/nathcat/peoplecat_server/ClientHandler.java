@@ -233,11 +233,11 @@ public class ClientHandler extends ConnectionHandler {
                 if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
 
                 JSONObject request = packets[0].getData();
-                if (request.get("ChatID") == null) {
+                if (request.get("chatId") == null) {
                     return new Packet[] {Packet.createError("Incorrect data provided", "You must provide the ChatID.")};
                 }
 
-                MessageQueue queue = server.db.messageStore.GetMessageQueue(Math.toIntExact((long) request.get("ChatID")));  // Because for some fucking reason this is a long
+                MessageQueue queue = server.db.messageStore.GetMessageQueue(Math.toIntExact((long) request.get("chatId")));  // Because for some fucking reason this is a long
 
                 if (queue == null) {
                     // Change of behaviour here, create a queue rather than reply with an error
@@ -252,18 +252,17 @@ public class ClientHandler extends ConnectionHandler {
                 int i = 0;
                 while ((msg = queue.Get(i)) != null) {
                     JSONObject m = new JSONObject();
-                    for (Field f : msg.getClass().getFields()) {
-                        try {
-                            m.put(f.getName(), f.get(msg));
-                        } catch (Exception ignored) {}
-                    }
+                    m.put("chatId", msg.ChatID);
+                    m.put("content", msg.Content);
+                    m.put("senderId", msg.SenderID);
+                    m.put("timeSent", msg.TimeSent);
 
                     messages.add(m);
                     i++;
                 }
 
                 JSONObject preResponse = new JSONObject();
-                preResponse.put("message-count", messages.size());
+                preResponse.put("messageCount", messages.size());
 
                 response.add(Packet.createPacket(
                         Packet.TYPE_GET_MESSAGE_QUEUE,
@@ -294,7 +293,7 @@ public class ClientHandler extends ConnectionHandler {
                 if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
 
                 JSONObject request = packets[0].getData();
-                Message msg = new Message((int) handler.user.get("id"), Math.toIntExact((long) request.get("ChatID")), (long) request.get("TimeSent"), request.get("Content"));
+                Message msg = new Message((int) handler.user.get("id"), Math.toIntExact((long) request.get("chatId")), (long) request.get("timeSent"), request.get("content"));
                 server.db.messageStore.GetMessageQueue(msg.ChatID).Push(msg);
                 try {
                     server.db.messageStore.WriteToFile();
@@ -304,12 +303,15 @@ public class ClientHandler extends ConnectionHandler {
                 }
 
                 // Notify other users about this message
-                int chatID = Math.toIntExact((long) request.get("ChatID"));
+                int chatID = Math.toIntExact((long) request.get("chatId"));
                 JSONObject notification = new JSONObject();
-                notification.put("title", "New message");
-                notification.put("message", "You have a new message from ");
-                notification.put("ChatID", chatID);
-                notification.put("Message", msg.GetJSONObject());
+                notification.put("chatId", chatID);
+                JSONObject msgJSON = new JSONObject();
+                msgJSON.put("chatId", msg.ChatID);
+                msgJSON.put("content", msg.Content);
+                msgJSON.put("senderId", msg.SenderID);
+                msgJSON.put("timeSent", msg.TimeSent);
+                notification.put("message", msgJSON);
                 Packet notifyPacket = Packet.createPacket(Packet.TYPE_NOTIFICATION_MESSAGE, true, notification);
                 for (int userID : server.db.chatMemberships.get(chatID)) {
                     if (userID == (int) handler.user.get("id")) {
@@ -340,7 +342,7 @@ public class ClientHandler extends ConnectionHandler {
                 try {
                     JSONObject[] results;
                     PreparedStatement stmt = server.db.getPreparedStatement("SELECT * FROM Chats WHERE ChatID = ?");
-                    stmt.setInt(1, (int) ((long) request.get("ChatID")));
+                    stmt.setInt(1, (int) ((long) request.get("chatId")));
                     stmt.execute(); results = Database.extractResultSet(stmt.getResultSet());
 
                     if (results.length != 1) {
@@ -353,11 +355,11 @@ public class ClientHandler extends ConnectionHandler {
                     return new Packet[] {Packet.createError("Server error", e.getMessage())};
                 }
 
-                if (!chat.get("JoinCode").equals(request.get("JoinCode"))) {
+                if (!chat.get("JoinCode").equals(request.get("joinCode"))) {
                     return new Packet[] {Packet.createError("Invalid join code", "The given join code is incorrect.")};
                 }
 
-                int chatID = Math.toIntExact((long) request.get("ChatID"));
+                int chatID = Math.toIntExact((long) request.get("chatId"));
                 int[] members = server.db.chatMemberships.get(chatID);
                 if (members == null) {
                     server.db.chatMemberships.set(chatID, new int[0]);
@@ -375,7 +377,13 @@ public class ClientHandler extends ConnectionHandler {
                 newMembers[members.length] = (int) handler.user.get("id");
                 server.db.chatMemberships.set(chatID, newMembers);
 
-                return new Packet[] {Packet.createPacket(Packet.TYPE_JOIN_CHAT, true, chat)};
+                JSONObject chatJSON = new JSONObject();
+                chatJSON.put("chatId", chat.get("ChatID"));
+                chatJSON.put("name", chat.get("Name"));
+                chatJSON.put("keyId", chat.get("KeyID"));
+                chatJSON.put("joinCode", chat.get("JoinCode"));
+
+                return new Packet[] {Packet.createPacket(Packet.TYPE_JOIN_CHAT, true, chatJSON)};
             }
 
             @Override
@@ -388,7 +396,7 @@ public class ClientHandler extends ConnectionHandler {
                 if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
 
                 JSONObject d = new JSONObject();
-                d.put("users-online", server.handlers.size());
+                d.put("usersOnline", server.handlers.size());
 
                 return new Packet[] { Packet.createPacket(
                         Packet.TYPE_GET_ACTIVE_USER_COUNT,
@@ -568,7 +576,7 @@ public class ClientHandler extends ConnectionHandler {
             public Packet[] getServerInfo(ConnectionHandler handler, Packet[] packets) {
                 JSONObject d = new JSONObject();
                 d.put("version", Server.version);
-                d.put("server-time", new Date().toString());
+                d.put("serverTime", new Date().toString());
 
                 return new Packet[] { Packet.createPacket(
                         Packet.TYPE_GET_SERVER_INFO,
