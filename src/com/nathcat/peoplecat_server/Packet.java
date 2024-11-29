@@ -64,15 +64,15 @@ public class Packet {
      * </p>
      * <pre>
      *     {
-     *         "cookie-auth": String
+     *         "cookieAuth": String  // Pre 4.2.0 this is named cookie-auth
      *     }
      * </pre>
      * <p>
-     *     Where the <code>cookie-auth</code> string is the value of the <code>AuthCat-SSO</code> cookie.
+     *     Where the <code>cookieAuth</code> string is the value of the <code>AuthCat-SSO</code> cookie.
      * </p>
      * <p>
      *     Cookie auth is available from server version 4.1.0, in this version the authentication flow requires <i><b>either</b></i>
-     *     cookie auth or normal auth to be specified, i.e. one or the other and not both. If the <code>cookie-auth</code>
+     *     cookie auth or normal auth to be specified, i.e. one or the other and not both. If the <code>cookieAuth</code>
      *     field is present, the server <i>will not attempt normal credential authentication</i>.
      * </p>
      * <p>

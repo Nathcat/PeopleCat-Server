@@ -69,8 +69,8 @@ public class ClientHandler extends ConnectionHandler {
                 // Get the data from the single packet
                 JSONObject user = packets[0].getData();
 
-                if (user.containsKey("cookie-auth")) {
-                    String cookie = (String) user.get("cookie-auth");
+                if (user.containsKey("cookieAuth")) {
+                    String cookie = (String) user.get("cookieAuth");
                     JSONObject r;
                     try {
                         r = AuthCat.loginWithCookie(cookie);
