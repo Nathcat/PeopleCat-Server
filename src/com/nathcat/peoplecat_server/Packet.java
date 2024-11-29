@@ -64,15 +64,15 @@ public class Packet {
      * </p>
      * <pre>
      *     {
-     *         "cookie-auth": String
+     *         "cookieAuth": String  // Pre 4.2.0 this is named cookie-auth
      *     }
      * </pre>
      * <p>
-     *     Where the <code>cookie-auth</code> string is the value of the <code>AuthCat-SSO</code> cookie.
+     *     Where the <code>cookieAuth</code> string is the value of the <code>AuthCat-SSO</code> cookie.
      * </p>
      * <p>
      *     Cookie auth is available from server version 4.1.0, in this version the authentication flow requires <i><b>either</b></i>
-     *     cookie auth or normal auth to be specified, i.e. one or the other and not both. If the <code>cookie-auth</code>
+     *     cookie auth or normal auth to be specified, i.e. one or the other and not both. If the <code>cookieAuth</code>
      *     field is present, the server <i>will not attempt normal credential authentication</i>.
      * </p>
      * <p>
@@ -189,7 +189,7 @@ public class Packet {
      * <h3>Payload format</h3>
      * <pre>
      *     {
-     *         "ChatID": Int
+     *         "chatId": Int  // Pre 4.2.0 this is named ChatID
      *     }
      * </pre>
      * <h3>Response format</h3>
@@ -199,7 +199,7 @@ public class Packet {
      * </p>
      * <pre>
      *     {
-     *         "message-count": Integer
+     *         "messageCount": Integer  // Pre 4.2.0 this is named message-count
      *     }
      * </pre>
      * <p>
@@ -212,10 +212,10 @@ public class Packet {
      * </p>
      * <pre>
      *     {
-     *         "ChatID": Int,
-     *         "Content" String,
-     *         "SenderID": Int,
-     *         "TimeSent": Long
+     *         "chatId": Int,       // Pre 4.2.0 this is named ChatID
+     *         "content" String,    // Pre 4.2.0 this is named Content
+     *         "senderId": Int,     // Pre 4.2.0 this is named SenderID
+     *         "timeSent": Long     // Pre 4.2.0 this is named TimeSent
      *     }
      * </pre>
      * <p>
@@ -233,9 +233,9 @@ public class Packet {
      * <h3>Payload format</h3>
      * <pre>
      *     {
-     *         "ChatID": Int,
-     *         "Content": String,
-     *         "TimeSent": Long
+     *         "chatId": Int,       // Pre 4.2.0 this is named ChatID
+     *         "content": String,   // Pre 4.2.0 this is named Content
+     *         "timeSent": Long     // Pre 4.2.0 this is named TimeSent
      *     }
      * </pre>
      * <h3>Response format</h3>
@@ -256,15 +256,15 @@ public class Packet {
      * <h3>Payload format</h3>
      * <pre>
      *     {
-     *         "title": String,
-     *         "message": String,
-     *         "ChatID": Int,
+     *         "title": String,         // Not included since 4.2.0
+     *         "message": String,       // Not included since 4.2.0
+     *         "chatId": Int,           // Pre 4.2.0 this is named ChatID
      *         // "Message" field only included since server v4.1.3
-     *         "Message": {
-     *              "ChatID": Int,
-     *              "Content" String,
-     *              "SenderID": Int,
-     *              "TimeSent": Long
+     *         "message": {             // Pre 4.2.0 this is named Message
+     *              "chatId": Int,      // Pre 4.2.0 this is named ChatID
+     *              "content" String,   // Pre 4.2.0 this is named Content
+     *              "senderId": Int,    // Pre 4.2.0 this is named SenderID
+     *              "timeSent": Long    // Pre 4.2.0 this is named TimeSent
      *         }
      *     }
      * </pre>
@@ -284,8 +284,8 @@ public class Packet {
      * <h3>Payload format</h3>
      * <pre>
      *     {
-     *         "ChatID": Int,
-     *         "JoinCode": String,
+     *         "chatId": Int,       // Pre 4.2.0 this is named ChatID
+     *         "joinCode": String,  // Pre 4.2.0 this is named JoinCode
      *     }
      * </pre>
      *
@@ -296,10 +296,10 @@ public class Packet {
      * </p>
      * <pre>
      *     {
-     *         "ChatID": Int,
-     *         "Name": String,
-     *         "KeyID": Int,
-     *         "JoinCode": String
+     *         "chatId": Int,       // Pre 4.2.0 this is named ChatID
+     *         "name": String,      // Pre 4.2.0 this is named Name
+     *         "keyId": Int,        // Pre 4.2.0 this is named KeyID
+     *         "joinCode": String   // Pre 4.2.0 this is named JoinCode
      *     }
      * </pre>
      */
@@ -348,7 +348,7 @@ public class Packet {
      * <h3>Response format</h3>
      * <p>
      *     {
-     *         "users-online": Int
+     *         "usersOnline": Int   // Pre 4.2.0 this is named users-online
      *     }
      * </p>
      */
@@ -506,7 +506,7 @@ public class Packet {
      * <pre>
      *     {
      *         "version": String,
-     *         "server-time": String,
+     *         "serverTime": String,    // Pre 4.2.0 this is named server-time
      *     }
      * </pre>
      */
