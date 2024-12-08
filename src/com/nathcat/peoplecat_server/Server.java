@@ -11,6 +11,8 @@ import java.net.Socket;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 
 
 public class Server {
@@ -66,7 +68,7 @@ public class Server {
         }
     }
 
-    public static final String version = "4.2.0";
+    public static final String version = "4.2.1";
 
     public int port;
     public int threadCount;
@@ -76,7 +78,7 @@ public class Server {
     /**
      * Maps a user's ID to their connected handler
      */
-    public HashMap<Integer, ClientHandler> userToHandler = new HashMap<>();
+    public HashMap<Integer, List<ClientHandler>> userToHandler = new HashMap<>();
     private Thread handlerCleaner;
 
 
