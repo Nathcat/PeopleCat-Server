@@ -16,9 +16,7 @@ import java.net.Socket;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
+import java.util.*;
 
 /**
  * Handles a connection to a client application.
@@ -84,7 +82,16 @@ public class ClientHandler extends ConnectionHandler {
                         handler.user = r;
                         handler.user.put("id", Math.toIntExact((long) handler.user.get("id")));
                         ClientHandler ch = (ClientHandler) handler;
-                        ch.server.userToHandler.put((int) handler.user.get("id"), (ClientHandler) handler);
+
+                        List<ClientHandler> handlerList = ch.server.userToHandler.get((int) handler.user.get("id"));
+                        if (handlerList == null) {
+                            handlerList = Collections.synchronizedList(new LinkedList<>());
+                            handlerList.add(ch);
+                            ch.server.userToHandler.put((int) handler.user.get("id"), handlerList);
+                        }
+                        else {
+                            handlerList.add(ch);
+                        }
 
                         return new Packet[] {Packet.createPacket(
                                 Packet.TYPE_AUTHENTICATE,
@@ -125,7 +132,13 @@ public class ClientHandler extends ConnectionHandler {
                 handler.user = (JSONObject) authCatResponse.get("user");
                 handler.user.put("id", Math.toIntExact((long) handler.user.get("id")));
                 ClientHandler ch = (ClientHandler) handler;
-                ch.server.userToHandler.put((int) handler.user.get("id"), (ClientHandler) handler);
+                List<ClientHandler> handlerList = ch.server.userToHandler.get((int) handler.user.get("id"));
+                if (handlerList != null) handlerList.add(ch);
+                else {
+                    handlerList = Collections.synchronizedList(new LinkedList<>());
+                    handlerList.add(ch);
+                    ch.server.userToHandler.put((int) handler.user.get("id"), handlerList);
+                }
 
                 try {
                     PreparedStatement stmt = server.db.getPreparedStatement("SELECT follower FROM Friends WHERE id = ?");
@@ -139,14 +152,16 @@ public class ClientHandler extends ConnectionHandler {
                     user_notif_data.remove("email");
 
                     for (JSONObject jsonObject : r) {
-                        ClientHandler h = server.userToHandler.get((int) jsonObject.get("follower"));
-                        h.writePacket(
-                                Packet.createPacket(
-                                        Packet.TYPE_NOTIFICATION_USER_ONLINE,
-                                        true,
-                                        user_notif_data
-                                )
-                        );
+                        //ClientHandler h = server.userToHandler.get((int) jsonObject.get("follower"));
+                        List<ClientHandler> followerList = server.userToHandler.get((int) jsonObject.get("follower"));
+
+                        if (followerList != null) followerList.forEach((ClientHandler h) -> h.writePacket(
+                               Packet.createPacket(
+                                       Packet.TYPE_NOTIFICATION_USER_ONLINE,
+                                       true,
+                                       user_notif_data
+                               )
+                        ));
                     }
                 }
                 catch (SQLException e) {
@@ -313,15 +328,18 @@ public class ClientHandler extends ConnectionHandler {
                 msgJSON.put("timeSent", msg.TimeSent);
                 notification.put("message", msgJSON);
                 Packet notifyPacket = Packet.createPacket(Packet.TYPE_NOTIFICATION_MESSAGE, true, notification);
-                for (int userID : server.db.chatMemberships.get(chatID)) {
-                    if (userID == (int) handler.user.get("id")) {
-                        continue;
-                    }
+                ClientHandler ch = (ClientHandler) handler;
 
-                    ClientHandler h;
-                    if ((h = ((ClientHandler) handler).server.userToHandler.get(userID)) != null) {
-                        h.writePacket(notifyPacket);
-                    }
+                for (int userID : server.db.chatMemberships.get(chatID)) {
+                    // Removing this condition will allow multiple clients connected under the same user
+                    // to receive messages from each other.
+
+                    //if (userID == (int) handler.user.get("id")) {
+                    //    continue;
+                    //}
+
+                    List<ClientHandler> handlerList = ch.server.userToHandler.get(userID);
+                    if (handlerList != null) handlerList.forEach((ClientHandler h) -> h.writePacket(notifyPacket));
                 }
 
                 return new Packet[] {Packet.createPing()};
@@ -645,7 +663,18 @@ public class ClientHandler extends ConnectionHandler {
         super.close();
 
         if (authenticated) {
-            server.userToHandler.remove((int) user.get("id"));
+            List<ClientHandler> handlerList = server.userToHandler.get((int) user.get("id"));
+
+            for (int i = 0; i < handlerList.size(); i++) {
+                // Presumably this comparison should determine if the handlers in question are the same handlers.
+                // I'm not sure why simply comparing the references doesn't work, but I will give this a go and
+                // see if it works.
+                // Apparantly it does indeed work now !
+                if (handlerList.get(i).threadId() == this.threadId()) {
+                    handlerList.remove(i);
+                    break;
+                }
+            }
 
             try {
                 PreparedStatement stmt = server.db.getPreparedStatement("SELECT follower FROM Friends WHERE id = ?");
@@ -659,14 +688,16 @@ public class ClientHandler extends ConnectionHandler {
                 user_notif_data.remove("email");
 
                 for (JSONObject jsonObject : r) {
-                    ClientHandler h = server.userToHandler.get((int) jsonObject.get("follower"));
-                    h.writePacket(
+                    List<ClientHandler> followerList = server.userToHandler.get((int) jsonObject.get("follower"));
+
+                    if (followerList != null)
+                        followerList.forEach((ClientHandler h) -> h.writePacket(
                             Packet.createPacket(
                                     Packet.TYPE_NOTIFICATION_USER_OFFLINE,
                                     true,
                                     user_notif_data
                             )
-                    );
+                        ));
                 }
             }
             catch (SQLException e) {
