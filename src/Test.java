@@ -6,7 +6,9 @@ import com.nathcat.peoplecat_server.IPacketHandler;
 import com.nathcat.peoplecat_server.Packet;
 import com.nathcat.peoplecat_server.Server;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.Socket;
@@ -16,9 +18,12 @@ import java.util.Date;
 
 public class Test {
     public static void main(String[] args) throws Exception {
-        TestHandler t = new TestHandler();
+        FileInputStream fis = new FileInputStream("test.json");
+        String content = new String(fis.readAllBytes());
+        JSONObject obj = (JSONObject) new JSONParser().parse(content);
 
-        while (true) {}
+        System.out.println(obj.get("messages").getClass());
+        fis.close();
     }
 }
 
