@@ -35,6 +35,7 @@ public class Database {
     public KeyStore keyStore;
     /**
      * The message store on this database
+     * @deprecated Should no longer be used, physical message handling has been moved to <code>MessageBox</code>
      */
     public MessageStore messageStore = new MessageStore();
 
