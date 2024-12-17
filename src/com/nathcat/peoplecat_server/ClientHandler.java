@@ -331,9 +331,12 @@ public class ClientHandler extends ConnectionHandler {
                 ClientHandler ch = (ClientHandler) handler;
 
                 for (int userID : server.db.chatMemberships.get(chatID)) {
-                    if (userID == (int) handler.user.get("id")) {
-                        continue;
-                    }
+                    // Removing this condition will allow multiple clients connected under the same user
+                    // to receive messages from each other.
+
+                    //if (userID == (int) handler.user.get("id")) {
+                    //    continue;
+                    //}
 
                     List<ClientHandler> handlerList = ch.server.userToHandler.get(userID);
                     if (handlerList != null) handlerList.forEach((ClientHandler h) -> h.writePacket(notifyPacket));
