@@ -662,9 +662,16 @@ public class ClientHandler extends ConnectionHandler {
         if (authenticated) {
             List<ClientHandler> handlerList = server.userToHandler.get((int) user.get("id"));
 
-            handlerList.forEach((ClientHandler h) -> {
-                if (h == this) handlerList.remove((int) user.get("id"));
-            });
+            for (int i = 0; i < handlerList.size(); i++) {
+                // Presumably this comparison should determine if the handlers in question are the same handlers.
+                // I'm not sure why simply comparing the references doesn't work, but I will give this a go and
+                // see if it works.
+                // Apparantly it does indeed work now !
+                if (handlerList.get(i).threadId() == this.threadId()) {
+                    handlerList.remove(i);
+                    break;
+                }
+            }
 
             try {
                 PreparedStatement stmt = server.db.getPreparedStatement("SELECT follower FROM Friends WHERE id = ?");
