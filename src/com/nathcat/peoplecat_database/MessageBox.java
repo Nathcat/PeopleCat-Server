@@ -107,13 +107,7 @@ public class MessageBox {
         JSONArray box = new JSONArray();
 
         for (Message m : messages) {
-            JSONObject obj = new JSONObject();
-            obj.put("senderId", m.SenderID);
-            obj.put("chatId", m.ChatID);
-            obj.put("timeSent", m.TimeSent);
-            obj.put("content", m.Content);
-
-            box.add(obj);
+            box.add(messageToJSON(m));
         }
 
         FileOutputStream fos = new FileOutputStream(getMessageBoxPath(id));
@@ -121,5 +115,15 @@ public class MessageBox {
           box.toJSONString().getBytes(StandardCharsets.UTF_8)
         );
         fos.close();
+    }
+
+    public static JSONObject messageToJSON(Message m) {
+        JSONObject obj = new JSONObject();
+        obj.put("senderId", m.SenderID);
+        obj.put("chatId", m.ChatID);
+        obj.put("timeSent", m.TimeSent);
+        obj.put("content", m.Content);
+
+        return obj;
     }
 }

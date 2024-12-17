@@ -5,14 +5,17 @@ import com.nathcat.AuthCat.Exceptions.InvalidResponse;
 import com.nathcat.messagecat_database.MessageQueue;
 import com.nathcat.messagecat_database_entities.Message;
 import com.nathcat.peoplecat_database.Database;
+import com.nathcat.peoplecat_database.MessageBox;
 import org.java_websocket.WebSocket;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.Socket;
+import java.nio.file.FileSystemNotFoundException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -252,32 +255,23 @@ public class ClientHandler extends ConnectionHandler {
                     return new Packet[] {Packet.createError("Incorrect data provided", "You must provide the ChatID.")};
                 }
 
-                MessageQueue queue = server.db.messageStore.GetMessageQueue(Math.toIntExact((long) request.get("chatId")));  // Because for some fucking reason this is a long
-
-                if (queue == null) {
-                    // Change of behaviour here, create a queue rather than reply with an error
-                    //return new Packet[] {Packet.createError("Chat does not exist", "The message queue for the specified chat does not exist in the database.")};
-                    queue = new MessageQueue(1);
-                    server.db.messageStore.AddMessageQueue(queue);
+                int chatId = Math.toIntExact((long) request.get("chatId"));
+                Message[] messages;
+                try {
+                    messages = MessageBox.openMessageBox(chatId);
                 }
+                catch (FileNotFoundException e) {
+                    try {
+                        MessageBox.updateMessageBox(chatId, new Message[0]);
+                        messages = MessageBox.openMessageBox(chatId);
+                    }
+                    catch (IOException ex) { throw new RuntimeException(ex); }
+                }
+                catch (IOException e) { throw new RuntimeException(e); }
 
                 ArrayList<Packet> response = new ArrayList<>();
-                ArrayList<JSONObject> messages = new ArrayList<>();
-                Message msg;
-                int i = 0;
-                while ((msg = queue.Get(i)) != null) {
-                    JSONObject m = new JSONObject();
-                    m.put("chatId", msg.ChatID);
-                    m.put("content", msg.Content);
-                    m.put("senderId", msg.SenderID);
-                    m.put("timeSent", msg.TimeSent);
-
-                    messages.add(m);
-                    i++;
-                }
-
                 JSONObject preResponse = new JSONObject();
-                preResponse.put("messageCount", messages.size());
+                preResponse.put("messageCount", messages.length);
 
                 response.add(Packet.createPacket(
                         Packet.TYPE_GET_MESSAGE_QUEUE,
@@ -285,7 +279,7 @@ public class ClientHandler extends ConnectionHandler {
                         preResponse
                 ));
 
-                for (JSONObject m : messages) {
+                for (JSONObject m : Arrays.stream(messages).map(MessageBox::messageToJSON).toList()) {
                     response.add(Packet.createPacket(
                             Packet.TYPE_GET_MESSAGE_QUEUE,
                             false,
@@ -293,7 +287,7 @@ public class ClientHandler extends ConnectionHandler {
                     ));
                 }
 
-                if (response.isEmpty()) {
+                if (messages.length == 0) {
                     return new Packet[] {Packet.createError("No messages", "There are no messages in this chat.")};
                 }
 
@@ -309,9 +303,13 @@ public class ClientHandler extends ConnectionHandler {
 
                 JSONObject request = packets[0].getData();
                 Message msg = new Message((int) handler.user.get("id"), Math.toIntExact((long) request.get("chatId")), (long) request.get("timeSent"), request.get("content"));
-                server.db.messageStore.GetMessageQueue(msg.ChatID).Push(msg);
+
                 try {
-                    server.db.messageStore.WriteToFile();
+                    Message[] messages = MessageBox.openMessageBox(msg.ChatID);
+                    Message[] newMessages = new Message[messages.length + 1];
+                    System.arraycopy(messages, 0, newMessages, 0, messages.length);
+                    newMessages[messages.length] = msg;
+                    MessageBox.updateMessageBox(msg.ChatID, newMessages);
                 }
                 catch (IOException e) {
                     return new Packet[] {Packet.createError("Server error", "An error occurred when writing the message store to the disk.")};
@@ -321,11 +319,7 @@ public class ClientHandler extends ConnectionHandler {
                 int chatID = Math.toIntExact((long) request.get("chatId"));
                 JSONObject notification = new JSONObject();
                 notification.put("chatId", chatID);
-                JSONObject msgJSON = new JSONObject();
-                msgJSON.put("chatId", msg.ChatID);
-                msgJSON.put("content", msg.Content);
-                msgJSON.put("senderId", msg.SenderID);
-                msgJSON.put("timeSent", msg.TimeSent);
+                JSONObject msgJSON = MessageBox.messageToJSON(msg);
                 notification.put("message", msgJSON);
                 Packet notifyPacket = Packet.createPacket(Packet.TYPE_NOTIFICATION_MESSAGE, true, notification);
                 ClientHandler ch = (ClientHandler) handler;
