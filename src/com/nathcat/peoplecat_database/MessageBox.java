@@ -74,7 +74,7 @@ public class MessageBox {
 
         // Purge the existing messages for messages which should be deleted.
         ArrayList<Message> purgedMessages = new ArrayList<>();
-        long timeValidFrom = new Date().getTime() - 864_000_000;  // The current time subtract 24 hours
+        long timeValidFrom = new Date().getTime() - 86_400_000;  // The current time subtract 24 hours
         messages.forEach((Object p) -> {
             if (p.getClass() != JSONObject.class) {
                 throw new RuntimeException("An element of message box array is not a JSONObject!");
