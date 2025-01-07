@@ -552,6 +552,7 @@ public class Packet {
      */
     public static final int TYPE_GET_CHAT_MEMBERSHIPS = 17;
     /**
+     * <p>Since version 5.0.0</p>
      * <h3>Purpose</h3>
      * <p>
      *     Allows an authenticated client to create a new chat
