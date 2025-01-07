@@ -551,6 +551,43 @@ public class Packet {
      * </pre>
      */
     public static final int TYPE_GET_CHAT_MEMBERSHIPS = 17;
+    /**
+     * <h3>Purpose</h3>
+     * <p>
+     *     Allows an authenticated client to create a new chat
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "name": String
+     *     }
+     * </pre>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     In the event that the server fails to create the chat it will respond with and error packet in the following format:
+     * </p>
+     * <pre>
+     *     {
+     *         "name": "Failed To Create Chat",
+     *         "msg": String
+     *     }
+     * </pre>
+     *
+     * <p>
+     *     If the server successfully creates the chat, it will reply with the data generated for the chat by the server, in the following format:
+     * </p>
+     * <pre>
+     *     {
+     *         "chatId": Integer,
+     *         "name": String,      // This will be the same as the "name" field specified in the request payload
+     *         "keyId": Integer,
+     *         "joinCode": String
+     *     }
+     * </pre>
+     */
+    public static final int TYPE_CREATE_CHAT = 18;
 
     /**
      * The type of request specified by the packet
