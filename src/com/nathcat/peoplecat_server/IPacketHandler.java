@@ -149,6 +149,15 @@ public interface IPacketHandler {
     Packet[] getServerInfo(ConnectionHandler handler, Packet[] packets);
 
     /**
+     * Handler a get chat memberships request
+     * @param handler The handler handling the connection
+     * @param packets The packet sequence from the endpoint
+     * @return The packet sequence to reply with
+     * @see Packet#TYPE_GET_CHAT_MEMBERSHIPS
+     */
+    Packet[] getChatMemberships(ConnectionHandler handler, Packet[] packets);
+
+    /**
      * Handle a packet sequence by determining which handler method to pass it to. Uses the type of the first packet
      * in the sequence to determine the appropriate handler method.
      * @param handler The ConnectionHandler handling the connection
@@ -174,6 +183,7 @@ public interface IPacketHandler {
             case Packet.TYPE_GET_FRIENDS -> getFriends(handler, packets);
             case Packet.TYPE_FRIEND_REQUEST -> friendRequest(handler, packets);
             case Packet.TYPE_GET_SERVER_INFO -> getServerInfo(handler, packets);
+            case Packet.TYPE_GET_CHAT_MEMBERSHIPS -> getChatMemberships(handler, packets);
 
             default -> throw new IllegalStateException("Unexpected value: " + packets[0].type);
         };
