@@ -1,5 +1,6 @@
 package com.nathcat.peoplecat_server;
 
+import com.mysql.cj.x.protobuf.MysqlxPrepare;
 import com.nathcat.AuthCat.AuthCat;
 import com.nathcat.AuthCat.Exceptions.InvalidResponse;
 import com.nathcat.messagecat_database.MessageQueue;
@@ -19,6 +20,7 @@ import java.nio.file.FileSystemNotFoundException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.*;
 
 /**
@@ -324,7 +326,24 @@ public class ClientHandler extends ConnectionHandler {
                 Packet notifyPacket = Packet.createPacket(Packet.TYPE_NOTIFICATION_MESSAGE, true, notification);
                 ClientHandler ch = (ClientHandler) handler;
 
-                for (int userID : server.db.chatMemberships.get(chatID)) {
+                int[] members;
+                try {
+                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT `user` FROM ChatMemberships WHERE `chatid` = ?");
+                    stmt.setInt(1, chatID);
+                    stmt.execute();
+
+                    JSONObject[] results = Database.extractResultSet(stmt.getResultSet());
+                    members = new int[results.length];
+                    for (int i = 0; i < results.length; i++) {
+                        members[i] = (int) results[i].get("user");
+                    }
+                }
+                catch (SQLException e) {
+                    handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()));
+                    return new Packet[] { Packet.createError("Database Error", e.getMessage()) };
+                }
+
+                for (int userID : members) {
                     // Removing this condition will allow multiple clients connected under the same user
                     // to receive messages from each other.
 
@@ -372,22 +391,21 @@ public class ClientHandler extends ConnectionHandler {
                 }
 
                 int chatID = Math.toIntExact((long) request.get("chatId"));
-                int[] members = server.db.chatMemberships.get(chatID);
-                if (members == null) {
-                    server.db.chatMemberships.set(chatID, new int[0]);
-                    members = server.db.chatMemberships.get(chatID);
-                }
 
-                for (int m : members) {
-                    if (m == (int) handler.user.get("id")) {
+                try {
+                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO ChatMemberships (`user`, `chatid`) VALUES (?, ?)");
+                    stmt.setInt(1, (int) handler.user.get("id"));
+                    stmt.setInt(2, chatID);
+                    stmt.executeUpdate();
+                } catch (SQLException e) {
+                    if (e.getClass().getName().contentEquals(SQLIntegrityConstraintViolationException.class.getName())) {
                         return new Packet[] {Packet.createError("Already member", "You are already a member of this chat.")};
                     }
+                    else {
+                        handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()));
+                        return new Packet[] { Packet.createError("SQL Error", e.getMessage()) };
+                    }
                 }
-
-                int[] newMembers = new int[members.length + 1];
-                System.arraycopy(members, 0, newMembers, 0, members.length);
-                newMembers[members.length] = (int) handler.user.get("id");
-                server.db.chatMemberships.set(chatID, newMembers);
 
                 JSONObject chatJSON = new JSONObject();
                 chatJSON.put("chatId", chat.get("ChatID"));
@@ -595,6 +613,85 @@ public class ClientHandler extends ConnectionHandler {
                         true,
                         d
                 )};
+            }
+
+            @Override
+            public Packet[] getChatMemberships(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+
+                Packet[] stream;
+                try {
+                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT Chats.ChatID AS `chatId`, Name AS `name`, KeyID AS `keyId`, JoinCode AS `joinCode` FROM ChatMemberships INNER JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE `user` = ?");
+                    stmt.setInt(1, (int) handler.user.get("id"));
+                    stmt.execute();
+                    JSONObject[] results = Database.extractResultSet(stmt.getResultSet());
+
+                    if (results.length == 0) {
+                        return new Packet[] { Packet.createError("No Chat Memberships", "This user is not a member of any chats.") };
+                    }
+
+                    stream = new Packet[results.length];
+                    for (int i = 0; i < results.length; i++) {
+                        stream[i] = Packet.createPacket(
+                                Packet.TYPE_GET_CHAT_MEMBERSHIPS,
+                                false,
+                                results[i]
+                        );
+                    }
+                }
+                catch (SQLException e) {
+                    handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()));
+                    return new Packet[] { Packet.createError("Database Error", e.getMessage()) };
+                }
+
+                stream[stream.length - 1].isFinal = true;
+                return stream;
+            }
+
+            @Override
+            public Packet[] createChat(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+
+                JSONObject request = packets[0].getData();
+                if (!request.containsKey("name")) {
+                    return new Packet[] { Packet.createError("Invalid Format", "You must specify the name field!") };
+                }
+                else if (request.get("name").equals("")) {
+                    return new Packet[] { Packet.createError("Invalid Format", "The name field cannot be empty!") };
+                }
+
+                String name = (String) request.get("name");
+                JSONObject chat;
+
+                try {
+                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO Chats (Name, JoinCode) VALUES (?, UUID())");
+                    stmt.setString(1, name);
+                    stmt.executeUpdate();
+
+                    stmt = server.db.getPreparedStatement("SELECT ChatID AS `chatId`, Name AS `name`, KeyID AS `keyId`, JoinCode AS `joinCode` FROM Chats WHERE ChatID = LAST_INSERT_ID()");
+                    stmt.execute();
+                    chat = Database.extractResultSet(stmt.getResultSet())[0];
+                    handler.log(chat.toJSONString());
+
+                    stmt = server.db.getPreparedStatement("INSERT INTO ChatMemberships (`user`, `chatid`) VALUES (?, ?)");
+                    stmt.setInt(1, (int) handler.user.get("id"));
+                    stmt.setInt(2, (int) chat.get("chatId"));
+                    stmt.executeUpdate();
+                }
+                catch (SQLException e) {
+                    handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()));
+                    return new Packet[] { Packet.createError("Database Error", e.getMessage()) };
+                }
+
+                return new Packet[] {
+                        Packet.createPacket(
+                                Packet.TYPE_CREATE_CHAT,
+                                true,
+                                chat
+                        )
+                };
             }
         };
     }

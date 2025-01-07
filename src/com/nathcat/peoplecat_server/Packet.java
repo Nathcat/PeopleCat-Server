@@ -513,6 +513,86 @@ public class Packet {
     public static final int TYPE_GET_SERVER_INFO = 16;
 
     /**
+     * <p>Since version 5.0.0</p>
+     * <h3>Purpose</h3>
+     * <p>
+     *     Get information about which chats the authenticated user is a member of
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <p>No payload required</p>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     If the user is not a member of any chats, the server will respond with an error packet with the following payload:
+     * </p>
+     * <pre>
+     *     {
+     *         "name": "No Chat Memberships",
+     *         "msg": "This user is not a member of any chats."
+     *     }
+     * </pre>
+     * <p>
+     *     Note that other general errors that may occur during this request will also be served under this packet type, but with a different payload,
+     *     so ensure that your client does not assume an error response from this request means there are no chat memberships, as that may not be the case.
+     * </p>
+     * <p>
+     *     Otherwise, the server will respond with a packet stream, each packet containing information for a single chat,
+     *     in the following format:
+     * </p>
+     *
+     * <pre>
+     *     {
+     *         "chatId": Integer,
+     *         "name": String,
+     *         "keyId": Integer,
+     *         "joinCode": String
+     *     }
+     * </pre>
+     */
+    public static final int TYPE_GET_CHAT_MEMBERSHIPS = 17;
+    /**
+     * <h3>Purpose</h3>
+     * <p>
+     *     Allows an authenticated client to create a new chat
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "name": String
+     *     }
+     * </pre>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     In the event that the server fails to create the chat it will respond with and error packet in the following format:
+     * </p>
+     * <pre>
+     *     {
+     *         "name": "Failed To Create Chat",
+     *         "msg": String
+     *     }
+     * </pre>
+     *
+     * <p>
+     *     If the server successfully creates the chat, it will reply with the data generated for the chat by the server, in the following format:
+     * </p>
+     * <pre>
+     *     {
+     *         "chatId": Integer,
+     *         "name": String,      // This will be the same as the "name" field specified in the request payload
+     *         "keyId": Integer,
+     *         "joinCode": String
+     *     }
+     * </pre>
+     * <p>
+     *     Note that the authenticated user will automatically be added as a member of the created chat once created
+     * </p>
+     */
+    public static final int TYPE_CREATE_CHAT = 18;
+
+    /**
      * The type of request specified by the packet
      */
     public int type;

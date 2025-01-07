@@ -28,7 +28,11 @@ public class Database {
      * @deprecated friendship store will be moved to an SQL table with the AuthCat integration
      */
     public DataStore<Integer, int[]> friendshipStore; // = new DataStore<>("Assets/Data/Friendships.bin");
-    public DataStore<Integer, int[]> chatMemberships = new DataStore<>("Assets/Data/ChatMemberships.bin");
+    /**
+     * The local store for chat memberships
+     * @deprecated this will be migrated to an SQL table from version 5.0.0
+     */
+    public DataStore<Integer, int[]> chatMemberships; // = new DataStore<>("Assets/Data/ChatMemberships.bin");
     /**
      * The key store on this database
      */
@@ -159,7 +163,7 @@ public class Database {
             while (rs.next()) {
                 JSONObject row = new JSONObject();
                 for (int i = 0; i < meta.getColumnCount(); i++) {
-                    row.put(meta.getColumnName(i + 1), rs.getObject(meta.getColumnName(i + 1)));
+                    row.put(meta.getColumnLabel(i + 1), rs.getObject(meta.getColumnLabel(i + 1)));
                 }
 
                 result.add(row);
