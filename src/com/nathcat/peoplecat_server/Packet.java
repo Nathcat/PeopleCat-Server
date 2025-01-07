@@ -300,6 +300,7 @@ public class Packet {
      *         "name": String,      // Pre 4.2.0 this is named Name
      *         "keyId": Int,        // Pre 4.2.0 this is named KeyID
      *         "joinCode": String   // Pre 4.2.0 this is named JoinCode
+     *         "icon": String       // Present from 5.0.0
      *     }
      * </pre>
      */
@@ -546,7 +547,8 @@ public class Packet {
      *         "chatId": Integer,
      *         "name": String,
      *         "keyId": Integer,
-     *         "joinCode": String
+     *         "joinCode": String,
+     *         "icon": String
      *     }
      * </pre>
      */
@@ -561,7 +563,8 @@ public class Packet {
      * <h3>Payload format</h3>
      * <pre>
      *     {
-     *         "name": String
+     *         "name": String,
+     *         "icon": String   // This field is optional!
      *     }
      * </pre>
      *
@@ -584,7 +587,8 @@ public class Packet {
      *         "chatId": Integer,
      *         "name": String,      // This will be the same as the "name" field specified in the request payload
      *         "keyId": Integer,
-     *         "joinCode": String
+     *         "joinCode": String,
+     *         "icon": String       // This will be the same as the "icon" field specified in the request payload
      *     }
      * </pre>
      * <p>
