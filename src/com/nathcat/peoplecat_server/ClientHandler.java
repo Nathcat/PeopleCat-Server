@@ -412,6 +412,7 @@ public class ClientHandler extends ConnectionHandler {
                 chatJSON.put("name", chat.get("Name"));
                 chatJSON.put("keyId", chat.get("KeyID"));
                 chatJSON.put("joinCode", chat.get("JoinCode"));
+                chatJSON.put("icon", chat.get("Icon"));
 
                 return new Packet[] {Packet.createPacket(Packet.TYPE_JOIN_CHAT, true, chatJSON)};
             }
@@ -622,7 +623,7 @@ public class ClientHandler extends ConnectionHandler {
 
                 Packet[] stream;
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT Chats.ChatID AS `chatId`, Name AS `name`, KeyID AS `keyId`, JoinCode AS `joinCode` FROM ChatMemberships INNER JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE `user` = ?");
+                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT Chats.ChatID AS `chatId`, Name AS `name`, KeyID AS `keyId`, JoinCode AS `joinCode`, Icon AS `icon` FROM ChatMemberships INNER JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE `user` = ?");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.execute();
                     JSONObject[] results = Database.extractResultSet(stmt.getResultSet());
@@ -663,14 +664,16 @@ public class ClientHandler extends ConnectionHandler {
                 }
 
                 String name = (String) request.get("name");
+                String icon = (String) request.get("icon");
                 JSONObject chat;
 
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO Chats (Name, JoinCode) VALUES (?, UUID())");
+                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO Chats (Name, JoinCode" + (icon == null ? "" : ", Icon") + ") VALUES (?, UUID()" + (icon == null ? "" : ", ?") + ")");
                     stmt.setString(1, name);
+                    if (icon != null) stmt.setString(2, icon);
                     stmt.executeUpdate();
 
-                    stmt = server.db.getPreparedStatement("SELECT ChatID AS `chatId`, Name AS `name`, KeyID AS `keyId`, JoinCode AS `joinCode` FROM Chats WHERE ChatID = LAST_INSERT_ID()");
+                    stmt = server.db.getPreparedStatement("SELECT ChatID AS `chatId`, Name AS `name`, KeyID AS `keyId`, JoinCode AS `joinCode`, Icon AS `icon` FROM Chats WHERE ChatID = LAST_INSERT_ID()");
                     stmt.execute();
                     chat = Database.extractResultSet(stmt.getResultSet())[0];
                     handler.log(chat.toJSONString());
