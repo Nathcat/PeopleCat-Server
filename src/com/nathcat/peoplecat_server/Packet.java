@@ -586,6 +586,9 @@ public class Packet {
      *         "joinCode": String
      *     }
      * </pre>
+     * <p>
+     *     Note that the authenticated user will automatically be added as a member of the created chat once created
+     * </p>
      */
     public static final int TYPE_CREATE_CHAT = 18;
 
