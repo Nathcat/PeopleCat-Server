@@ -596,6 +596,32 @@ public class Packet {
      * </p>
      */
     public static final int TYPE_CREATE_CHAT = 18;
+    /**
+     * <p>Since version 5.0.0</p>
+     * <h3>Purpose</h3>
+     * <p>
+     *     This packet type allows a client to initialise the public key of the currently authenticated user.
+     * </p>
+     * <p>
+     *     Note that all encrypted data will be deleted upon this request's success. Meaning the user will no longer have
+     *     access to their old chats.
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "newPublicKey": <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a>
+     *     }
+     * </pre>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     If successful, the server will respond with a packet of the same type, with an empty payload. Otherwise it
+     *     will respond with an error packet detailing the error.
+     * </p>
+     */
+    public static final int TYPE_INIT_USER_KEY = 19;
+
 
     /**
      * The type of request specified by the packet

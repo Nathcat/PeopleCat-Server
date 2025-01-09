@@ -696,6 +696,17 @@ public class ClientHandler extends ConnectionHandler {
                         )
                 };
             }
+
+            @Override
+            public Packet[] initUserKey(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+
+                JSONObject request = packets[0].getData();
+
+                // TODO
+                return new Packet[0];
+            }
         };
     }
 
