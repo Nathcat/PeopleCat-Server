@@ -796,7 +796,7 @@ public class Packet {
         try {
             dos.writeInt(type);
             dos.writeBoolean(isFinal);
-            byte[] s = payload.toJSONString().getBytes(StandardCharsets.UTF_8);
+            byte[] s = payload != null ? payload.toJSONString().getBytes(StandardCharsets.UTF_8) : new byte[0];
             dos.writeInt(s.length);
             dos.write(s);
             dos.flush();

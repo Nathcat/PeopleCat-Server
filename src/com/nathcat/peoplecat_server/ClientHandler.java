@@ -6,6 +6,7 @@ import com.nathcat.AuthCat.Exceptions.InvalidResponse;
 import com.nathcat.messagecat_database.MessageQueue;
 import com.nathcat.messagecat_database_entities.Message;
 import com.nathcat.peoplecat_database.Database;
+import com.nathcat.peoplecat_database.KeyManager;
 import com.nathcat.peoplecat_database.MessageBox;
 import org.java_websocket.WebSocket;
 import org.json.simple.JSONObject;
@@ -702,10 +703,41 @@ public class ClientHandler extends ConnectionHandler {
                 if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
                 if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
 
+                // Verify the request format is correct
                 JSONObject request = packets[0].getData();
 
-                // TODO
-                return new Packet[0];
+                if (!request.containsKey("newPublicKey")) {
+                    return new Packet[] { Packet.createError("Invalid Format", "You must specify the newPublicKey field!") };
+                }
+
+                //
+                // Phase 1 - Re-initialise the user's key set
+                //
+
+                try {
+                    KeyManager.initUserKey((int) handler.user.get("id"), (JSONObject) request.get("newPublicKey"));
+
+                } catch (IOException e) {
+                    handler.log("\033[91m;3mKey Init Error (Phase 1): " + e.getMessage() + "\033[0m");
+                    return new Packet[] { Packet.createError("Key Init Error", e.getMessage()) };
+                }
+
+                //
+                // Phase 2 - Update SQL of changes
+                //
+
+                try {
+                    PreparedStatement stmt = server.db.getPreparedStatement("DELETE FROM ChatMemberships WHERE user = ?");
+                    stmt.setInt(1, (int) handler.user.get("id"));
+                    stmt.executeUpdate();
+                    stmt.close();
+
+                } catch (SQLException e) {
+                    handler.log("\033[91m;3mKey Init Error (Phase 2): " + e.getMessage() + "\033[0m");
+                    return new Packet[] { Packet.createError("Key Init Error", e.getMessage()) };
+                }
+
+                return new Packet[] { Packet.createPacket(Packet.TYPE_INIT_USER_KEY, true, null) };
             }
         };
     }

@@ -10,8 +10,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 
 /**
  * Utility class for managing encryption keys
@@ -23,7 +21,7 @@ public class KeyManager {
      * Get the key file, if it does not exist, initialise the key file with an empty JSON set.
      * @return The <code>JSONObject</code> parsed from the key file.
      */
-    private static JSONObject getKeyFile() {
+    private static JSONObject getKeyFile() throws IOException {
         try (FileInputStream fis = new FileInputStream(KEY_FILE_PATH)) {
             return (JSONObject) new JSONParser().parse(new String(fis.readAllBytes(), StandardCharsets.UTF_8));
         }
@@ -32,7 +30,7 @@ public class KeyManager {
             writeKeyFile(new JSONObject());
             return getKeyFile();
         }
-        catch (IOException | ParseException e) {
+        catch (ParseException e) {  // This shouldn't happen
             throw new RuntimeException(e);
         }
     }
@@ -41,13 +39,10 @@ public class KeyManager {
      * Write the contents of a new key structure to the key file
      * @param contents The new the key structure
      */
-    private static void writeKeyFile(JSONObject contents) {
-        try (FileOutputStream fos = new FileOutputStream(KEY_FILE_PATH)) {
-            fos.write(contents.toJSONString().getBytes(StandardCharsets.UTF_8));
-        }
-        catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    private static void writeKeyFile(JSONObject contents) throws IOException {
+        FileOutputStream fos = new FileOutputStream(KEY_FILE_PATH);
+        fos.write(contents.toJSONString().getBytes(StandardCharsets.UTF_8));
+        fos.close();
     }
 
     /**
@@ -55,7 +50,7 @@ public class KeyManager {
      * @param id The user's ID
      * @return The user's public key in <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> format, or null if there is no key, an invalid number of keys, or an SQL exception occurs.
      */
-    public static JSONObject getUserKey(int id) {
+    public static JSONObject getUserKey(int id) throws IOException {
         JSONObject keyFile = getKeyFile();
         JSONObject userKeys = (JSONObject) keyFile.get(id);
 
@@ -76,7 +71,7 @@ public class KeyManager {
      * @param chatId The chat ID
      * @return The chat key of chat <code>chatId</code> specific to user <code>userId</code>
      */
-    public static JSONObject getChatKey(int userId, int chatId) {
+    public static JSONObject getChatKey(int userId, int chatId) throws IOException, IllegalStateException {
         JSONObject keyFile = getKeyFile();
         JSONObject userKeys = (JSONObject) keyFile.get(userId);
 
@@ -85,7 +80,7 @@ public class KeyManager {
         }
 
         if (!userKeys.containsKey("chatKeys")) {
-            throw new RuntimeException("User " + userId + "'s key set does not contain a chat key set!");
+            throw new IllegalStateException("User " + userId + "'s key set does not contain a chat key set!");
         }
 
         JSONObject chatKeys = (JSONObject) userKeys.get("chatKeys");
@@ -97,7 +92,7 @@ public class KeyManager {
      * @param userId The user ID who this key belongs to
      * @param key The key in <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> format.
      */
-    public static void initUserKey(int userId, JSONObject key) {
+    public static void initUserKey(int userId, JSONObject key) throws IOException {
         JSONObject keyFile = getKeyFile();
 
         JSONObject newUserSet = new JSONObject();
@@ -115,7 +110,7 @@ public class KeyManager {
      * @param key The key itself
      * @see Packet#TYPE_JOIN_CHAT
      */
-    public static void addChatKey(int userId, int chatId, JSONObject key) throws IllegalStateException {
+    public static void addChatKey(int userId, int chatId, JSONObject key) throws IOException, IllegalStateException {
         JSONObject keyFile = getKeyFile();
         JSONObject userKeys = (JSONObject) keyFile.get(userId);
 
