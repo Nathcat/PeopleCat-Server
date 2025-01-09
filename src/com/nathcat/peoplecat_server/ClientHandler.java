@@ -759,10 +759,12 @@ public class ClientHandler extends ConnectionHandler {
                 } catch (IOException e) {
                     handler.log("\033[91;3mIO Error: " + e.getClass().getName() + "\033[0m");
                     return new Packet[] { Packet.createError("Key Retrieval Error", e.getClass().getName() + " occurred while trying to get the requested key.") };
+                } catch (IllegalStateException e) {
+                    return new Packet[] { Packet.createError("Key Not Found", "The user has a key set, but the key set does not contain a user key! Try re-initialising the user's key.") };
                 }
 
                 if (key == null) {
-                    return new Packet[] { Packet.createError("Key Not Found", "No key can be found for the specified user.") };
+                    return new Packet[] { Packet.createError("Key Set Not Found", "No key set can be found for the specified user.") };
                 }
 
                 return new Packet[] {
