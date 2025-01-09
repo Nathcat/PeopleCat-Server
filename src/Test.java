@@ -1,6 +1,7 @@
 import com.nathcat.messagecat_database.MessageQueue;
 import com.nathcat.messagecat_database.MessageStore;
 import com.nathcat.messagecat_database_entities.Message;
+import com.nathcat.peoplecat_database.KeyManager;
 import com.nathcat.peoplecat_server.ConnectionHandler;
 import com.nathcat.peoplecat_server.IPacketHandler;
 import com.nathcat.peoplecat_server.Packet;
@@ -18,12 +19,7 @@ import java.util.Date;
 
 public class Test {
     public static void main(String[] args) throws Exception {
-        FileInputStream fis = new FileInputStream("test.json");
-        String content = new String(fis.readAllBytes());
-        JSONObject obj = (JSONObject) new JSONParser().parse(content);
-
-        System.out.println(obj.get("messages").getClass());
-        fis.close();
+        System.out.println(KeyManager.getUserKey(1));
     }
 }
 
@@ -134,6 +130,11 @@ class TestHandler extends ConnectionHandler {
 
             @Override
             public Packet[] initUserKey(ConnectionHandler handler, Packet[] packets) {
+                return new Packet[0];
+            }
+
+            @Override
+            public Packet[] getUserKey(ConnectionHandler handler, Packet[] packets) {
                 return new Packet[0];
             }
         });

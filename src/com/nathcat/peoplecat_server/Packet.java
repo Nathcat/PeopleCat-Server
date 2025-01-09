@@ -622,6 +622,27 @@ public class Packet {
      */
     public static final int TYPE_INIT_USER_KEY = 19;
 
+    /**
+     * <p>Since version 5.0.0</p>
+     * <h3>Purpose</h3>
+     * <p>
+     *     Get the public key of the requested user.
+     * </p>
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "id": Integer
+     *     }
+     * </pre>
+     * <h3>Response format</h3>
+     * <p>
+     *     The server will either respond with a packet under this type, with the payload containing the requested
+     *     user's public key in <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> format,
+     *     or will respond with an error packet if no such key exists.
+     * </p>
+     */
+    public static final int TYPE_GET_USER_KEY = 20;
+
 
     /**
      * The type of request specified by the packet

@@ -50,16 +50,16 @@ public class KeyManager {
      * @param id The user's ID
      * @return The user's public key in <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> format, or null if there is no key, an invalid number of keys, or an SQL exception occurs.
      */
-    public static JSONObject getUserKey(int id) throws IOException {
+    public static JSONObject getUserKey(int id) throws IOException, IllegalStateException {
         JSONObject keyFile = getKeyFile();
-        JSONObject userKeys = (JSONObject) keyFile.get(id);
+        JSONObject userKeys = (JSONObject) keyFile.get(String.valueOf(id));
 
         if (userKeys == null) {
             return null;
         }
 
         if (!userKeys.containsKey("userKey")) {
-            throw new RuntimeException("User " + id + "'s key set does not contain a user key!");
+            throw new IllegalStateException("User " + id + "'s key set does not contain a user key!");
         }
 
         return (JSONObject) userKeys.get("userKey");
@@ -73,7 +73,7 @@ public class KeyManager {
      */
     public static JSONObject getChatKey(int userId, int chatId) throws IOException, IllegalStateException {
         JSONObject keyFile = getKeyFile();
-        JSONObject userKeys = (JSONObject) keyFile.get(userId);
+        JSONObject userKeys = (JSONObject) keyFile.get(String.valueOf(userId));
 
         if (userKeys == null) {
             return null;
@@ -84,7 +84,7 @@ public class KeyManager {
         }
 
         JSONObject chatKeys = (JSONObject) userKeys.get("chatKeys");
-        return (JSONObject) chatKeys.get(chatId);
+        return (JSONObject) chatKeys.get(String.valueOf(chatId));
     }
 
     /**
@@ -112,7 +112,7 @@ public class KeyManager {
      */
     public static void addChatKey(int userId, int chatId, JSONObject key) throws IOException, IllegalStateException {
         JSONObject keyFile = getKeyFile();
-        JSONObject userKeys = (JSONObject) keyFile.get(userId);
+        JSONObject userKeys = (JSONObject) keyFile.get(String.valueOf(userId));
 
         if (userKeys == null) {
             throw new IllegalStateException("User key set does not exist!");

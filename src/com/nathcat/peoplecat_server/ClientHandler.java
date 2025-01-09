@@ -739,6 +739,40 @@ public class ClientHandler extends ConnectionHandler {
 
                 return new Packet[] { Packet.createPacket(Packet.TYPE_INIT_USER_KEY, true, null) };
             }
+
+            @Override
+            public Packet[] getUserKey(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+
+                // Check the request contains the required field
+                JSONObject request = packets[0].getData();
+                if (!request.containsKey("id")) {
+                    return new Packet[] { Packet.createError("Invalid Format", "You must specify the id of the user!") };
+                }
+
+                // Get the field from the request data, and attempt to retrieve the user's key.
+                int id = request.get("id").getClass() == Long.class ? Math.toIntExact((long) request.get("id")) : (int) request.get("id");
+                JSONObject key;
+                try {
+                    key = KeyManager.getUserKey(id);
+                } catch (IOException e) {
+                    handler.log("\033[91;3mIO Error: " + e.getClass().getName() + "\033[0m");
+                    return new Packet[] { Packet.createError("Key Retrieval Error", e.getClass().getName() + " occurred while trying to get the requested key.") };
+                }
+
+                if (key == null) {
+                    return new Packet[] { Packet.createError("Key Not Found", "No key can be found for the specified user.") };
+                }
+
+                return new Packet[] {
+                        Packet.createPacket(
+                                Packet.TYPE_GET_USER_KEY,
+                                true,
+                                key
+                        )
+                };
+            }
         };
     }
 
