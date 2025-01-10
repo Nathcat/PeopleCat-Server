@@ -68,7 +68,7 @@ public class Server {
         }
     }
 
-    public static final String version = "5.0.0-pre";
+    public static final String version = "5.0.0-pre-SQL_timeout_fix";
 
     public int port;
     public int threadCount;
