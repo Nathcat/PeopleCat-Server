@@ -71,7 +71,7 @@ public class KeyManager {
      * @param chatId The chat ID
      * @return The chat key of chat <code>chatId</code> specific to user <code>userId</code>
      */
-    public static JSONObject getChatKey(int userId, int chatId) throws IOException, IllegalStateException {
+    public static String getChatKey(int userId, int chatId) throws IOException, IllegalStateException {
         JSONObject keyFile = getKeyFile();
         JSONObject userKeys = (JSONObject) keyFile.get(String.valueOf(userId));
 
@@ -84,7 +84,7 @@ public class KeyManager {
         }
 
         JSONObject chatKeys = (JSONObject) userKeys.get("chatKeys");
-        return (JSONObject) chatKeys.get(String.valueOf(chatId));
+        return (String) chatKeys.get(String.valueOf(chatId));
     }
 
     /**
@@ -98,7 +98,7 @@ public class KeyManager {
         JSONObject newUserSet = new JSONObject();
         newUserSet.put("userKey", key);
 
-        keyFile.put(userId, newUserSet);
+        keyFile.put(String.valueOf(userId), newUserSet);
         writeKeyFile(keyFile);
     }
 
@@ -124,9 +124,9 @@ public class KeyManager {
             chatKeys = new JSONObject();
         }
 
-        chatKeys.put(chatId, key);
+        chatKeys.put(String.valueOf(chatId), key);
         userKeys.put("chatKeys", chatKeys);
-        keyFile.put(userId, userKeys);
+        keyFile.put(String.valueOf(userId), userKeys);
         writeKeyFile(keyFile);
     }
 }

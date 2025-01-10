@@ -801,6 +801,9 @@ public class ClientHandler extends ConnectionHandler {
                     return new Packet[] { Packet.createError("Invalid Format", "Request is missing some required fields!") };
                 }
 
+                request.put("id", request.get("id").getClass() == Long.class ? Math.toIntExact((long) request.get("id")) : request.get("id"));
+                request.put("chatId", request.get("chatId").getClass() == Long.class ? Math.toIntExact((long) request.get("chatId")) : request.get("chatId"));
+
                 // Verify that this user is a member of the chat, and has its key
                 try {
                     if (KeyManager.getChatKey((int) handler.user.get("id"), (int) request.get("chatId")) == null) {
@@ -819,7 +822,7 @@ public class ClientHandler extends ConnectionHandler {
                     stmt.executeUpdate();
 
                 } catch (SQLException e) {
-                    return new Packet[] { Packet.createError("DB Error", "Failed to add the membership record to the database.") };
+                    return new Packet[] { Packet.createError("DB Error", "Failed to add the membership record to the database: " + e.getMessage()) };
                 } catch (IOException | IllegalStateException e) {
                     return new Packet[] { Packet.createError("Key Submission Error", "Failed to add the key to the target user's key set: " + e.getMessage()) };
                 }
