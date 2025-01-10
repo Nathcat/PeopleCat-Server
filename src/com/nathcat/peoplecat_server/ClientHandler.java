@@ -814,6 +814,22 @@ public class ClientHandler extends ConnectionHandler {
                 request.put("id", request.get("id").getClass() == Long.class ? Math.toIntExact((long) request.get("id")) : request.get("id"));
                 request.put("chatId", request.get("chatId").getClass() == Long.class ? Math.toIntExact((long) request.get("chatId")) : request.get("chatId"));
 
+                // Verify that this user and the target user are friends
+                try {
+                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT * FROM Friends WHERE id = ? AND follower = ?");
+                    stmt.setInt(1, (int) handler.user.get("id"));
+                    stmt.setInt(2, (int) request.get("id"));
+                    stmt.execute();
+
+                    JSONObject[] results = Database.extractResultSet(stmt.getResultSet());
+                    if (results.length == 0) {
+                        return new Packet[] { Packet.createError("Request Rejected", "You are not friends with the target user.") };
+                    }
+                }
+                catch (SQLException e) {
+                    return new Packet[] { Packet.createError("Friend Verification Failed", "Failed to verify whether or not you and the target user are friends: " + e.getMessage()) };
+                }
+
                 // Verify that this user is a member of the chat, and has its key
                 try {
                     if (KeyManager.getChatKey((int) handler.user.get("id"), (int) request.get("chatId")) == null) {
