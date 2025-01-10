@@ -142,6 +142,7 @@ public class Database {
      */
     public PreparedStatement getPreparedStatement(String q) throws SQLException {
         try {
+            if (conn.isClosed()) StartMySQLConnection();
             return conn.prepareStatement(q);
         }
         catch (CommunicationsException e) {
