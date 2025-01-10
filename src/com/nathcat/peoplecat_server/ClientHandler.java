@@ -624,13 +624,27 @@ public class ClientHandler extends ConnectionHandler {
 
                 Packet[] stream;
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT Chats.ChatID AS `chatId`, Name AS `name`, KeyID AS `keyId`, JoinCode AS `joinCode`, Icon AS `icon` FROM ChatMemberships INNER JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE `user` = ?");
+                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT Chats.ChatID AS `chatId`, Name AS `name`, JoinCode AS `joinCode`, Icon AS `icon`, PubKey AS `publicKey` FROM ChatMemberships INNER JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE `user` = ?");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.execute();
                     JSONObject[] results = Database.extractResultSet(stmt.getResultSet());
 
                     if (results.length == 0) {
                         return new Packet[] { Packet.createError("No Chat Memberships", "This user is not a member of any chats.") };
+                    }
+
+                    JSONParser parser = new JSONParser();
+
+                    for (int i = 0; i < results.length; i++) {
+                        try {
+                            results[i].put("publicKey", parser.parse((String) results[i].get("publicKey")));
+                            results[i].put("privateKey", KeyManager.getChatKey((int) handler.user.get("id"), (int) results[i].get("chatId")));
+                        }
+                        catch (IOException | IllegalStateException e) {
+                            results[i].put("privateKey", null);
+                        } catch (ParseException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
 
                     stream = new Packet[results.length];

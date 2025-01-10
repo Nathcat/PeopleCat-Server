@@ -548,7 +548,9 @@ public class Packet {
      *         "name": String,
      *         "keyId": Integer,
      *         "joinCode": String,
-     *         "icon": String
+     *         "icon": String,
+     *         "publicKey": <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a>,
+     *         "privateKey": Hex string containing a <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> encrypted with the user key
      *     }
      * </pre>
      */
