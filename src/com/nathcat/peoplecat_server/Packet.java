@@ -301,7 +301,6 @@ public class Packet {
      *         "keyId": Int,                // Pre 4.2.0 this is named KeyID
      *         "joinCode": String,          // Pre 4.2.0 this is named JoinCode, not present from 5.0.0
      *         "icon": String,              // Present from 5.0.0
-     *         "publicKey": JSON Web Key    // Present from 5.0.0
      *     }
      * </pre>
      */
@@ -550,8 +549,7 @@ public class Packet {
      *         "keyId": Integer,
      *         "joinCode": String,
      *         "icon": String,
-     *         "publicKey": <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a>,
-     *         "privateKey": Hex string containing a <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> encrypted with the user key
+     *         "key": Hex string containing a <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> encrypted with the user key
      *     }
      * </pre>
      */
@@ -568,8 +566,7 @@ public class Packet {
      *     {
      *         "name": String,
      *         "icon": String,                                                          // This field is optional!
-     *         "publicKey": JSON Web Key                                                // This field is only required for encrypted chats, leave unset to create a public chat.
-     *         "privateKey": Hex string of a JSON Web Key encrypted with the user key   // ^^
+     *         "key": Hex string of a JSON Web Key encrypted with the user key          // This field is only required for encrypted chats, leave unset to create a public chat.
      *     }
      * </pre>
      *
@@ -593,8 +590,7 @@ public class Packet {
      *         "name": String,                                                          // This will be the same as the "name" field specified in the request payload
      *         "keyId": Integer,
      *         "icon": String,                                                          // This will be the same as the "icon" field specified in the request payload
-     *         "publicKey": JSON Web Key                                                // This will be the same as the "publicKey" field specified in the request payload
-     *         "privateKey": Hex string of a JSON Web Key encrypted with the user key   // This will be the same as the "privateKey" field specified in the request payload
+     *         "key": Hex string of a JSON Web Key encrypted with the user key          // This will be the same as the "privateKey" field specified in the request payload
      *     }
      * </pre>
      * <p>
@@ -661,7 +657,7 @@ public class Packet {
      *     {
      *         "id": Integer,       // ID of user to add to the chat
      *         "chatId": Integer,   // ID of the chat to add the user to
-     *         "encPrivateKey": Hex string of a <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> encrypted with the <i>other</i> user's public key
+     *         "key": Hex string of a <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> encrypted with the <i>other</i> user's public key
      *     }
      * </pre>
      * <h3>Response format</h3>

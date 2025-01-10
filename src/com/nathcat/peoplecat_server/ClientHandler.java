@@ -387,7 +387,7 @@ public class ClientHandler extends ConnectionHandler {
                     return new Packet[] {Packet.createError("Server error", e.getMessage())};
                 }
 
-                if (chat.get("PubKey") != null) {
+                if ((int) chat.get("isPrivate") == 1) {
                     return new Packet[] {Packet.createError("Access Denied", "You do not have access to this chat!")};
                 }
 
@@ -412,7 +412,6 @@ public class ClientHandler extends ConnectionHandler {
                 chatJSON.put("chatId", chat.get("ChatID"));
                 chatJSON.put("name", chat.get("Name"));
                 chatJSON.put("keyId", chat.get("KeyID"));
-                chatJSON.put("publicKey", chat.get("PubKey"));
                 chatJSON.put("icon", chat.get("Icon"));
 
                 return new Packet[] {Packet.createPacket(Packet.TYPE_JOIN_CHAT, true, chatJSON)};
@@ -624,7 +623,7 @@ public class ClientHandler extends ConnectionHandler {
 
                 Packet[] stream;
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT Chats.ChatID AS `chatId`, Name AS `name`, JoinCode AS `joinCode`, Icon AS `icon`, PubKey AS `publicKey` FROM ChatMemberships INNER JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE `user` = ?");
+                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT Chats.ChatID AS `chatId`, Name AS `name`, JoinCode AS `joinCode`, Icon AS `icon`, isPrivate FROM ChatMemberships INNER JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE `user` = ?");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.execute();
                     JSONObject[] results = Database.extractResultSet(stmt.getResultSet());
@@ -637,13 +636,10 @@ public class ClientHandler extends ConnectionHandler {
 
                     for (int i = 0; i < results.length; i++) {
                         try {
-                            results[i].put("publicKey", parser.parse((String) results[i].get("publicKey")));
-                            results[i].put("privateKey", KeyManager.getChatKey((int) handler.user.get("id"), (int) results[i].get("chatId")));
+                            results[i].put("key", KeyManager.getChatKey((int) handler.user.get("id"), (int) results[i].get("chatId")));
                         }
                         catch (IOException | IllegalStateException e) {
-                            results[i].put("privateKey", null);
-                        } catch (ParseException e) {
-                            throw new RuntimeException(e);
+                            results[i].put("key", null);
                         }
                     }
 
@@ -680,30 +676,25 @@ public class ClientHandler extends ConnectionHandler {
 
                 String name = (String) request.get("name");
                 String icon = (String) request.get("icon");
-                JSONObject tmp = (JSONObject) request.get("publicKey");
-                String pubKey = tmp == null ? null : tmp.toJSONString();
-                String priKey = (String) request.get("privateKey");
+                String key = (String) request.get("key");
                 JSONObject chat;
 
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO Chats (Name" + (pubKey == null ? "" : ", PubKey") + (icon == null ? "" : ", Icon") + ") VALUES (?" + (pubKey == null ? "" : ", ?") + (icon == null ? "" : ", ?") + ")");
+                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO Chats (Name" + (key == null ? "" : ", isPrivate") + (icon == null ? "" : ", Icon") + ") VALUES (?" + (key == null ? "" : ", 1") + (icon == null ? "" : ", ?") + ")");
                     stmt.setString(1, name);
-                    int i = 2;
-                    if (pubKey != null) stmt.setString(i++, pubKey);
-                    if (icon != null) stmt.setString(i, icon);
+                    if (icon != null) stmt.setString(2, icon);
                     stmt.executeUpdate();
 
-                    stmt = server.db.getPreparedStatement("SELECT ChatID AS `chatId`, Name AS `name`, Icon AS `icon`, PubKey AS `publicKey` FROM Chats WHERE ChatID = LAST_INSERT_ID()");
+                    stmt = server.db.getPreparedStatement("SELECT ChatID AS `chatId`, Name AS `name`, Icon AS `icon`, isPrivate FROM Chats WHERE ChatID = LAST_INSERT_ID()");
                     stmt.execute();
                     chat = Database.extractResultSet(stmt.getResultSet())[0];
-                    handler.log(chat.toJSONString());
 
                     stmt = server.db.getPreparedStatement("INSERT INTO ChatMemberships (`user`, `chatid`) VALUES (?, ?)");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.setInt(2, (int) chat.get("chatId"));
                     stmt.executeUpdate();
 
-                    if (priKey != null) KeyManager.addChatKey((int) handler.user.get("id"), (int) chat.get("chatId"), priKey);
+                    if (key != null) KeyManager.addChatKey((int) handler.user.get("id"), (int) chat.get("chatId"), key);
                 }
                 catch (SQLException e) {
                     handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
@@ -841,7 +832,7 @@ public class ClientHandler extends ConnectionHandler {
 
                 // Add the chat membership and key to the other user's records
                 try {
-                    KeyManager.addChatKey((int) request.get("id"), (int) request.get("chatId"), (String) request.get("encPrivateKey"));
+                    KeyManager.addChatKey((int) request.get("id"), (int) request.get("chatId"), (String) request.get("key"));
                     PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO ChatMemberships (`user`, `chatId`) VALUES (?, ?)");
                     stmt.setInt(1, (int) request.get("id"));
                     stmt.setInt(2, (int) request.get("chatId"));
