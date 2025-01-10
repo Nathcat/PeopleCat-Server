@@ -185,6 +185,15 @@ public interface IPacketHandler {
     Packet[] getUserKey(ConnectionHandler handler, Packet[] packets);
 
     /**
+     * Handles a request to add a new user to an encrypted chat
+     * @param handler The handler handling the connection
+     * @param packets The packet sequence from the endpoint
+     * @return The packet sequence to reply with
+     * @see Packet#TYPE_ADD_TO_CHAT
+     */
+    Packet[] addToChat(ConnectionHandler handler, Packet[] packets);
+
+    /**
      * Handle a packet sequence by determining which handler method to pass it to. Uses the type of the first packet
      * in the sequence to determine the appropriate handler method.
      * @param handler The ConnectionHandler handling the connection
@@ -214,6 +223,7 @@ public interface IPacketHandler {
             case Packet.TYPE_CREATE_CHAT -> createChat(handler, packets);
             case Packet.TYPE_INIT_USER_KEY -> initUserKey(handler, packets);
             case Packet.TYPE_GET_USER_KEY -> getUserKey(handler, packets);
+            case Packet.TYPE_ADD_TO_CHAT -> addToChat(handler, packets);
 
             default -> throw new IllegalStateException("Unexpected value: " + packets[0].type);
         };

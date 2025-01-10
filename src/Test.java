@@ -137,6 +137,11 @@ class TestHandler extends ConnectionHandler {
             public Packet[] getUserKey(ConnectionHandler handler, Packet[] packets) {
                 return new Packet[0];
             }
+
+            @Override
+            public Packet[] addToChat(ConnectionHandler handler, Packet[] packets) {
+                return new Packet[0];
+            }
         });
     }
 

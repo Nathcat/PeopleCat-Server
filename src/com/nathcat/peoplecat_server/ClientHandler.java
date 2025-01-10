@@ -789,6 +789,47 @@ public class ClientHandler extends ConnectionHandler {
                         )
                 };
             }
+
+            @Override
+            public Packet[] addToChat(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+
+                JSONObject request = packets[0].getData();
+
+                if (!request.containsKey("id") || !request.containsKey("chatId")) {
+                    return new Packet[] { Packet.createError("Invalid Format", "Request is missing some required fields!") };
+                }
+
+                // Verify that this user is a member of the chat, and has its key
+                try {
+                    if (KeyManager.getChatKey((int) handler.user.get("id"), (int) request.get("chatId")) == null) {
+                        throw new IllegalStateException();
+                    }
+                } catch (IOException | IllegalStateException e) {
+                    return new Packet[] { Packet.createError("Access Denied", " You do not have access to this chat sufficient to perform this action.") };
+                }
+
+                // Add the chat membership and key to the other user's records
+                try {
+                    KeyManager.addChatKey((int) request.get("id"), (int) request.get("chatId"), (String) request.get("encPrivateKey"));
+                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO ChatMemberships (`user`, `chatId`) VALUES (?, ?)");
+                    stmt.setInt(1, (int) request.get("id"));
+                    stmt.setInt(2, (int) request.get("chatId"));
+                    stmt.executeUpdate();
+
+                } catch (SQLException e) {
+                    return new Packet[] { Packet.createError("DB Error", "Failed to add the membership record to the database.") };
+                } catch (IOException | IllegalStateException e) {
+                    return new Packet[] { Packet.createError("Key Submission Error", "Failed to add the key to the target user's key set: " + e.getMessage()) };
+                }
+
+                return new Packet[] { Packet.createPacket(
+                        Packet.TYPE_ADD_TO_CHAT,
+                        true,
+                        null
+                )};
+            }
         };
     }
 

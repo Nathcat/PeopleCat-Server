@@ -645,6 +645,29 @@ public class Packet {
      */
     public static final int TYPE_GET_USER_KEY = 20;
 
+    /**
+     * <p>Since version 5.0.0</p>
+     * <h3>Purpose</h3>
+     * <p>
+     *     Allows a user to add a friend to a chat. The primary use of this is when adding new users
+     *     to encrypted chats, public chats should be joined using the join chat request.
+     * </p>
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "id": Integer,       // ID of user to add to the chat
+     *         "chatId": Integer,   // ID of the chat to add the user to
+     *         "encPrivateKey": Hex string of a <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> encrypted with the <i>other</i> user's public key
+     *     }
+     * </pre>
+     * <h3>Response format</h3>
+     * <p>
+     *     The server will either reply with an error packet upon failiure, or a packet under the same type with an empty
+     *     payload upon success.
+     * </p>
+     */
+    public static final int TYPE_ADD_TO_CHAT = 21;
+
 
     /**
      * The type of request specified by the packet

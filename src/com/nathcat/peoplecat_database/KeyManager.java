@@ -110,7 +110,7 @@ public class KeyManager {
      * @param key The key itself
      * @see Packet#TYPE_JOIN_CHAT
      */
-    public static void addChatKey(int userId, int chatId, JSONObject key) throws IOException, IllegalStateException {
+    public static void addChatKey(int userId, int chatId, String key) throws IOException, IllegalStateException {
         JSONObject keyFile = getKeyFile();
         JSONObject userKeys = (JSONObject) keyFile.get(String.valueOf(userId));
 
