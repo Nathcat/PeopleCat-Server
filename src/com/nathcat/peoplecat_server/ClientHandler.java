@@ -387,8 +387,8 @@ public class ClientHandler extends ConnectionHandler {
                     return new Packet[] {Packet.createError("Server error", e.getMessage())};
                 }
 
-                if (!chat.get("JoinCode").equals(request.get("joinCode"))) {
-                    return new Packet[] {Packet.createError("Invalid join code", "The given join code is incorrect.")};
+                if (chat.get("PubKey") != null) {
+                    return new Packet[] {Packet.createError("Access Denied", "You do not have access to this chat!")};
                 }
 
                 int chatID = Math.toIntExact((long) request.get("chatId"));
@@ -412,7 +412,7 @@ public class ClientHandler extends ConnectionHandler {
                 chatJSON.put("chatId", chat.get("ChatID"));
                 chatJSON.put("name", chat.get("Name"));
                 chatJSON.put("keyId", chat.get("KeyID"));
-                chatJSON.put("joinCode", chat.get("JoinCode"));
+                chatJSON.put("publicKey", chat.get("PubKey"));
                 chatJSON.put("icon", chat.get("Icon"));
 
                 return new Packet[] {Packet.createPacket(Packet.TYPE_JOIN_CHAT, true, chatJSON)};
@@ -680,15 +680,20 @@ public class ClientHandler extends ConnectionHandler {
 
                 String name = (String) request.get("name");
                 String icon = (String) request.get("icon");
+                JSONObject tmp = (JSONObject) request.get("publicKey");
+                String pubKey = tmp == null ? null : tmp.toJSONString();
+                String priKey = (String) request.get("privateKey");
                 JSONObject chat;
 
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO Chats (Name, JoinCode" + (icon == null ? "" : ", Icon") + ") VALUES (?, UUID()" + (icon == null ? "" : ", ?") + ")");
+                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO Chats (Name" + (pubKey == null ? "" : ", PubKey") + (icon == null ? "" : ", Icon") + ") VALUES (?" + (pubKey == null ? "" : ", ?") + (icon == null ? "" : ", ?") + ")");
                     stmt.setString(1, name);
-                    if (icon != null) stmt.setString(2, icon);
+                    int i = 2;
+                    if (pubKey != null) stmt.setString(i++, pubKey);
+                    if (icon != null) stmt.setString(i, icon);
                     stmt.executeUpdate();
 
-                    stmt = server.db.getPreparedStatement("SELECT ChatID AS `chatId`, Name AS `name`, KeyID AS `keyId`, JoinCode AS `joinCode`, Icon AS `icon` FROM Chats WHERE ChatID = LAST_INSERT_ID()");
+                    stmt = server.db.getPreparedStatement("SELECT ChatID AS `chatId`, Name AS `name`, Icon AS `icon`, PubKey AS `publicKey` FROM Chats WHERE ChatID = LAST_INSERT_ID()");
                     stmt.execute();
                     chat = Database.extractResultSet(stmt.getResultSet())[0];
                     handler.log(chat.toJSONString());
@@ -697,10 +702,15 @@ public class ClientHandler extends ConnectionHandler {
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.setInt(2, (int) chat.get("chatId"));
                     stmt.executeUpdate();
+
+                    if (priKey != null) KeyManager.addChatKey((int) handler.user.get("id"), (int) chat.get("chatId"), priKey);
                 }
                 catch (SQLException e) {
-                    handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()));
+                    handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
                     return new Packet[] { Packet.createError("Database Error", e.getMessage()) };
+                } catch (IOException | IllegalStateException e) {
+                    handler.log("\033[91m;3mKey Submission Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
+                    return new Packet[] { Packet.createError("Key Submission Error", "Failed to submit private key: " + e.getMessage()) };
                 }
 
                 return new Packet[] {

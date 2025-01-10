@@ -285,7 +285,7 @@ public class Packet {
      * <pre>
      *     {
      *         "chatId": Int,       // Pre 4.2.0 this is named ChatID
-     *         "joinCode": String,  // Pre 4.2.0 this is named JoinCode
+     *         "joinCode": String,  // Pre 4.2.0 this is named JoinCode, not required from 5.0.0
      *     }
      * </pre>
      *
@@ -296,11 +296,12 @@ public class Packet {
      * </p>
      * <pre>
      *     {
-     *         "chatId": Int,       // Pre 4.2.0 this is named ChatID
-     *         "name": String,      // Pre 4.2.0 this is named Name
-     *         "keyId": Int,        // Pre 4.2.0 this is named KeyID
-     *         "joinCode": String   // Pre 4.2.0 this is named JoinCode
-     *         "icon": String       // Present from 5.0.0
+     *         "chatId": Int,               // Pre 4.2.0 this is named ChatID
+     *         "name": String,              // Pre 4.2.0 this is named Name
+     *         "keyId": Int,                // Pre 4.2.0 this is named KeyID
+     *         "joinCode": String,          // Pre 4.2.0 this is named JoinCode, not present from 5.0.0
+     *         "icon": String,              // Present from 5.0.0
+     *         "publicKey": JSON Web Key    // Present from 5.0.0
      *     }
      * </pre>
      */
@@ -566,7 +567,9 @@ public class Packet {
      * <pre>
      *     {
      *         "name": String,
-     *         "icon": String   // This field is optional!
+     *         "icon": String,                                                          // This field is optional!
+     *         "publicKey": JSON Web Key                                                // This field is only required for encrypted chats, leave unset to create a public chat.
+     *         "privateKey": Hex string of a JSON Web Key encrypted with the user key   // ^^
      *     }
      * </pre>
      *
@@ -587,10 +590,11 @@ public class Packet {
      * <pre>
      *     {
      *         "chatId": Integer,
-     *         "name": String,      // This will be the same as the "name" field specified in the request payload
+     *         "name": String,                                                          // This will be the same as the "name" field specified in the request payload
      *         "keyId": Integer,
-     *         "joinCode": String,
-     *         "icon": String       // This will be the same as the "icon" field specified in the request payload
+     *         "icon": String,                                                          // This will be the same as the "icon" field specified in the request payload
+     *         "publicKey": JSON Web Key                                                // This will be the same as the "publicKey" field specified in the request payload
+     *         "privateKey": Hex string of a JSON Web Key encrypted with the user key   // This will be the same as the "privateKey" field specified in the request payload
      *     }
      * </pre>
      * <p>
