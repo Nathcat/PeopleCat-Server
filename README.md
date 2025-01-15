@@ -1,7 +1,7 @@
 # PeopleCat-Server
 A Social Media platform for the future.
 
-_PeopleCat © Nathcat 2024_
+_PeopleCat © Nathcat 2024 - 2025_
 
 ## Usage
 In order to run the server, download a compiled jar package from the releases page, and create the following
