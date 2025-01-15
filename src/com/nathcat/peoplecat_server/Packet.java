@@ -80,6 +80,9 @@ public class Packet {
      *     the server will try cookie authentication, and upon failure will try credential authentication.
      * </p>
      * <h3>Response Format</h3>
+     * <p>
+     *     Note that the key pair field will be null if the user has no initialised key pair.
+     * </p>
      * <pre>
      *     {
      *         "id": Int,
@@ -88,7 +91,11 @@ public class Packet {
      *         "password": String,
      *         "pfpPath": String,
      *         "verified": Boolean,
-     *         "passwordUpdated": Boolean
+     *         "passwordUpdated": Boolean,
+     *         "keyPair": {  // Since version 5.0.0
+     *             "publicKey": <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a>,
+     *             "privateKey": Hex string representing an encrypted <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a>
+     *         }
      *     }
      * </pre>
      */
@@ -285,7 +292,7 @@ public class Packet {
      * <pre>
      *     {
      *         "chatId": Int,       // Pre 4.2.0 this is named ChatID
-     *         "joinCode": String,  // Pre 4.2.0 this is named JoinCode
+     *         "joinCode": String,  // Pre 4.2.0 this is named JoinCode, not required from 5.0.0
      *     }
      * </pre>
      *
@@ -296,11 +303,11 @@ public class Packet {
      * </p>
      * <pre>
      *     {
-     *         "chatId": Int,       // Pre 4.2.0 this is named ChatID
-     *         "name": String,      // Pre 4.2.0 this is named Name
-     *         "keyId": Int,        // Pre 4.2.0 this is named KeyID
-     *         "joinCode": String   // Pre 4.2.0 this is named JoinCode
-     *         "icon": String       // Present from 5.0.0
+     *         "chatId": Int,               // Pre 4.2.0 this is named ChatID
+     *         "name": String,              // Pre 4.2.0 this is named Name
+     *         "keyId": Int,                // Pre 4.2.0 this is named KeyID
+     *         "joinCode": String,          // Pre 4.2.0 this is named JoinCode, not present from 5.0.0
+     *         "icon": String,              // Present from 5.0.0
      *     }
      * </pre>
      */
@@ -548,7 +555,8 @@ public class Packet {
      *         "name": String,
      *         "keyId": Integer,
      *         "joinCode": String,
-     *         "icon": String
+     *         "icon": String,
+     *         "key": Hex string containing a <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> encrypted with the user key
      *     }
      * </pre>
      */
@@ -564,7 +572,8 @@ public class Packet {
      * <pre>
      *     {
      *         "name": String,
-     *         "icon": String   // This field is optional!
+     *         "icon": String,                                                          // This field is optional!
+     *         "key": Hex string of a JSON Web Key encrypted with the user key          // This field is only required for encrypted chats, leave unset to create a public chat.
      *     }
      * </pre>
      *
@@ -585,10 +594,10 @@ public class Packet {
      * <pre>
      *     {
      *         "chatId": Integer,
-     *         "name": String,      // This will be the same as the "name" field specified in the request payload
+     *         "name": String,                                                          // This will be the same as the "name" field specified in the request payload
      *         "keyId": Integer,
-     *         "joinCode": String,
-     *         "icon": String       // This will be the same as the "icon" field specified in the request payload
+     *         "icon": String,                                                          // This will be the same as the "icon" field specified in the request payload
+     *         "key": Hex string of a JSON Web Key encrypted with the user key          // This will be the same as the "privateKey" field specified in the request payload
      *     }
      * </pre>
      * <p>
@@ -596,6 +605,83 @@ public class Packet {
      * </p>
      */
     public static final int TYPE_CREATE_CHAT = 18;
+    /**
+     * <p>Since version 5.0.0</p>
+     * <h3>Purpose</h3>
+     * <p>
+     *     This packet type allows a client to initialise the public key of the currently authenticated user.
+     * </p>
+     * <p>
+     *     Note that all encrypted data will be deleted upon this request's success. Meaning the user will no longer have
+     *     access to their old chats.
+     * </p>
+     * <p>
+     *     The user's asymmetric keypair should be generated on the client-side. The public key should be sent to the user
+     *     in an unencrypted JSON Web Key format, while the private key should be encrypted using a symmetric key derived
+     *     from the user's plaintext password using the <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/deriveKey#pbkdf2">PBKDF2 algorithm</a>,
+     *     and should be a <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/encrypt#aes-gcm">AES-GCM</a> key.
+     * </p>
+     *
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "newPublicKey": <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a>,
+     *         "newPrivateKey": Hex string representing a <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> encrypted with the user's symmetric key derived from their plaintext password
+     *     }
+     * </pre>
+     *
+     * <h3>Response format</h3>
+     * <p>
+     *     If successful, the server will respond with a packet of the same type, with an empty payload. Otherwise it
+     *     will respond with an error packet detailing the error.
+     * </p>
+     */
+    public static final int TYPE_INIT_USER_KEY = 19;
+
+    /**
+     * <p>Since version 5.0.0</p>
+     * <h3>Purpose</h3>
+     * <p>
+     *     Get the public key of the requested user.
+     * </p>
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "id": Integer
+     *     }
+     * </pre>
+     * <h3>Response format</h3>
+     * <p>
+     *     The server will either respond with a packet under this type, with the payload containing the requested
+     *     user's public key in <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> format,
+     *     or will respond with an error packet if no such key exists.
+     * </p>
+     */
+    public static final int TYPE_GET_USER_KEY = 20;
+
+    /**
+     * <p>Since version 5.0.0</p>
+     * <h3>Purpose</h3>
+     * <p>
+     *     Allows a user to add a friend to a chat. The primary use of this is when adding new users
+     *     to encrypted chats, public chats should be joined using the join chat request.
+     * </p>
+     * <h3>Payload format</h3>
+     * <pre>
+     *     {
+     *         "id": Integer,       // ID of user to add to the chat
+     *         "chatId": Integer,   // ID of the chat to add the user to
+     *         "key": Hex string of a <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> encrypted with the <i>other</i> user's public key
+     *     }
+     * </pre>
+     * <h3>Response format</h3>
+     * <p>
+     *     The server will either reply with an error packet upon failiure, or a packet under the same type with an empty
+     *     payload upon success.
+     * </p>
+     */
+    public static final int TYPE_ADD_TO_CHAT = 21;
+
 
     /**
      * The type of request specified by the packet
@@ -770,7 +856,7 @@ public class Packet {
         try {
             dos.writeInt(type);
             dos.writeBoolean(isFinal);
-            byte[] s = payload.toJSONString().getBytes(StandardCharsets.UTF_8);
+            byte[] s = payload != null ? payload.toJSONString().getBytes(StandardCharsets.UTF_8) : new byte[0];
             dos.writeInt(s.length);
             dos.write(s);
             dos.flush();

@@ -6,6 +6,7 @@ import com.nathcat.AuthCat.Exceptions.InvalidResponse;
 import com.nathcat.messagecat_database.MessageQueue;
 import com.nathcat.messagecat_database_entities.Message;
 import com.nathcat.peoplecat_database.Database;
+import com.nathcat.peoplecat_database.KeyManager;
 import com.nathcat.peoplecat_database.MessageBox;
 import org.java_websocket.WebSocket;
 import org.json.simple.JSONObject;
@@ -98,10 +99,52 @@ public class ClientHandler extends ConnectionHandler {
                             handlerList.add(ch);
                         }
 
+                        try {
+                            PreparedStatement stmt = server.db.getPreparedStatement("SELECT follower FROM Friends WHERE id = ?");
+                            stmt.setInt(1, (int) handler.user.get("id"));
+                            stmt.execute();
+                            JSONObject[] friends = Database.extractResultSet(stmt.getResultSet());
+                            JSONObject user_notif_data = new JSONObject();
+                            user_notif_data.putAll(handler.user);
+                            user_notif_data.remove("password");
+                            user_notif_data.remove("verified");
+                            user_notif_data.remove("email");
+
+                            for (JSONObject jsonObject : friends) {
+                                //ClientHandler h = server.userToHandler.get((int) jsonObject.get("follower"));
+                                List<ClientHandler> followerList = server.userToHandler.get((int) jsonObject.get("follower"));
+
+                                if (followerList != null) followerList.forEach((ClientHandler h) -> h.writePacket(
+                                        Packet.createPacket(
+                                                Packet.TYPE_NOTIFICATION_USER_ONLINE,
+                                                true,
+                                                user_notif_data
+                                        )
+                                ));
+                            }
+                        }
+                        catch (SQLException e) {
+                            handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
+                        }
+
+                        JSONObject keyPair;
+                        try {
+                            keyPair = KeyManager.getUserKey((int) handler.user.get("id"));
+                        } catch (IOException e) {
+                            handler.log("\033[91;3mIO Error: " + e.getClass().getName() + "\033[0m");
+                            return new Packet[] { Packet.createError("Key Retrieval Error", e.getClass().getName() + " occurred while trying to get the requested key.") };
+                        } catch (IllegalStateException e) {
+                            keyPair = null;
+                        }
+
+                        JSONObject response = new JSONObject();
+                        response.putAll(handler.user);
+                        response.put("keyPair", keyPair);
+
                         return new Packet[] {Packet.createPacket(
                                 Packet.TYPE_AUTHENTICATE,
                                 true,
-                                handler.user
+                                response
                         )};
                     }
 
@@ -173,10 +216,24 @@ public class ClientHandler extends ConnectionHandler {
                     handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
                 }
 
+                JSONObject keyPair;
+                try {
+                    keyPair = KeyManager.getUserKey((int) handler.user.get("id"));
+                } catch (IOException e) {
+                    handler.log("\033[91;3mIO Error: " + e.getClass().getName() + "\033[0m");
+                    return new Packet[] { Packet.createError("Key Retrieval Error", e.getClass().getName() + " occurred while trying to get the requested key.") };
+                } catch (IllegalStateException e) {
+                    keyPair = null;
+                }
+
+                JSONObject response = new JSONObject();
+                response.putAll(handler.user);
+                response.put("keyPair", keyPair);
+
                 return new Packet[] {Packet.createPacket(
                         Packet.TYPE_AUTHENTICATE,
                         true,
-                        handler.user
+                        response
                 )};
             }
 
@@ -386,8 +443,8 @@ public class ClientHandler extends ConnectionHandler {
                     return new Packet[] {Packet.createError("Server error", e.getMessage())};
                 }
 
-                if (!chat.get("JoinCode").equals(request.get("joinCode"))) {
-                    return new Packet[] {Packet.createError("Invalid join code", "The given join code is incorrect.")};
+                if ((int) chat.get("isPrivate") == 1) {
+                    return new Packet[] {Packet.createError("Access Denied", "You do not have access to this chat!")};
                 }
 
                 int chatID = Math.toIntExact((long) request.get("chatId"));
@@ -411,7 +468,6 @@ public class ClientHandler extends ConnectionHandler {
                 chatJSON.put("chatId", chat.get("ChatID"));
                 chatJSON.put("name", chat.get("Name"));
                 chatJSON.put("keyId", chat.get("KeyID"));
-                chatJSON.put("joinCode", chat.get("JoinCode"));
                 chatJSON.put("icon", chat.get("Icon"));
 
                 return new Packet[] {Packet.createPacket(Packet.TYPE_JOIN_CHAT, true, chatJSON)};
@@ -623,13 +679,24 @@ public class ClientHandler extends ConnectionHandler {
 
                 Packet[] stream;
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT Chats.ChatID AS `chatId`, Name AS `name`, KeyID AS `keyId`, JoinCode AS `joinCode`, Icon AS `icon` FROM ChatMemberships INNER JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE `user` = ?");
+                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT Chats.ChatID AS `chatId`, Name AS `name`, JoinCode AS `joinCode`, Icon AS `icon`, isPrivate FROM ChatMemberships INNER JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE `user` = ?");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.execute();
                     JSONObject[] results = Database.extractResultSet(stmt.getResultSet());
 
                     if (results.length == 0) {
                         return new Packet[] { Packet.createError("No Chat Memberships", "This user is not a member of any chats.") };
+                    }
+
+                    JSONParser parser = new JSONParser();
+
+                    for (int i = 0; i < results.length; i++) {
+                        try {
+                            results[i].put("key", KeyManager.getChatKey((int) handler.user.get("id"), (int) results[i].get("chatId")));
+                        }
+                        catch (IOException | IllegalStateException e) {
+                            results[i].put("key", null);
+                        }
                     }
 
                     stream = new Packet[results.length];
@@ -665,27 +732,32 @@ public class ClientHandler extends ConnectionHandler {
 
                 String name = (String) request.get("name");
                 String icon = (String) request.get("icon");
+                String key = (String) request.get("key");
                 JSONObject chat;
 
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO Chats (Name, JoinCode" + (icon == null ? "" : ", Icon") + ") VALUES (?, UUID()" + (icon == null ? "" : ", ?") + ")");
+                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO Chats (Name" + (key == null ? "" : ", isPrivate") + (icon == null ? "" : ", Icon") + ") VALUES (?" + (key == null ? "" : ", 1") + (icon == null ? "" : ", ?") + ")");
                     stmt.setString(1, name);
                     if (icon != null) stmt.setString(2, icon);
                     stmt.executeUpdate();
 
-                    stmt = server.db.getPreparedStatement("SELECT ChatID AS `chatId`, Name AS `name`, KeyID AS `keyId`, JoinCode AS `joinCode`, Icon AS `icon` FROM Chats WHERE ChatID = LAST_INSERT_ID()");
+                    stmt = server.db.getPreparedStatement("SELECT ChatID AS `chatId`, Name AS `name`, Icon AS `icon`, isPrivate FROM Chats WHERE ChatID = LAST_INSERT_ID()");
                     stmt.execute();
                     chat = Database.extractResultSet(stmt.getResultSet())[0];
-                    handler.log(chat.toJSONString());
 
                     stmt = server.db.getPreparedStatement("INSERT INTO ChatMemberships (`user`, `chatid`) VALUES (?, ?)");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.setInt(2, (int) chat.get("chatId"));
                     stmt.executeUpdate();
+
+                    if (key != null) KeyManager.addChatKey((int) handler.user.get("id"), (int) chat.get("chatId"), key);
                 }
                 catch (SQLException e) {
-                    handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()));
+                    handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
                     return new Packet[] { Packet.createError("Database Error", e.getMessage()) };
+                } catch (IOException | IllegalStateException e) {
+                    handler.log("\033[91m;3mKey Submission Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
+                    return new Packet[] { Packet.createError("Key Submission Error", "Failed to submit private key: " + e.getMessage()) };
                 }
 
                 return new Packet[] {
@@ -695,6 +767,144 @@ public class ClientHandler extends ConnectionHandler {
                                 chat
                         )
                 };
+            }
+
+            @Override
+            public Packet[] initUserKey(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+
+                // Verify the request format is correct
+                JSONObject request = packets[0].getData();
+
+                if (!request.containsKey("newPublicKey") || !request.containsKey("newPrivateKey")) {
+                    return new Packet[] { Packet.createError("Invalid Format", "There are missing required fields from the payload!") };
+                }
+
+                //
+                // Phase 1 - Re-initialise the user's key set
+                //
+
+                try {
+                    KeyManager.initUserKey((int) handler.user.get("id"), (JSONObject) request.get("newPublicKey"), (String) request.get("newPrivateKey"));
+
+                } catch (IOException e) {
+                    handler.log("\033[91m;3mKey Init Error (Phase 1): " + e.getMessage() + "\033[0m");
+                    return new Packet[] { Packet.createError("Key Init Error", e.getMessage()) };
+                }
+
+                //
+                // Phase 2 - Update SQL of changes
+                //
+
+                try {
+                    PreparedStatement stmt = server.db.getPreparedStatement("DELETE FROM ChatMemberships WHERE user = ?");
+                    stmt.setInt(1, (int) handler.user.get("id"));
+                    stmt.executeUpdate();
+                    stmt.close();
+
+                } catch (SQLException e) {
+                    handler.log("\033[91m;3mKey Init Error (Phase 2): " + e.getMessage() + "\033[0m");
+                    return new Packet[] { Packet.createError("Key Init Error", e.getMessage()) };
+                }
+
+                return new Packet[] { Packet.createPacket(Packet.TYPE_INIT_USER_KEY, true, null) };
+            }
+
+            @Override
+            public Packet[] getUserKey(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+
+                // Check the request contains the required field
+                JSONObject request = packets[0].getData();
+                if (!request.containsKey("id")) {
+                    return new Packet[] { Packet.createError("Invalid Format", "You must specify the id of the user!") };
+                }
+
+                // Get the field from the request data, and attempt to retrieve the user's key.
+                int id = request.get("id").getClass() == Long.class ? Math.toIntExact((long) request.get("id")) : (int) request.get("id");
+                JSONObject key;
+                try {
+                    key = KeyManager.getUserKey(id);
+                } catch (IOException e) {
+                    handler.log("\033[91;3mIO Error: " + e.getClass().getName() + "\033[0m");
+                    return new Packet[] { Packet.createError("Key Retrieval Error", e.getClass().getName() + " occurred while trying to get the requested key.") };
+                } catch (IllegalStateException e) {
+                    return new Packet[] { Packet.createError("Key Not Found", "The user has a key set, but the key set does not contain a user key! Try re-initialising the user's key.") };
+                }
+
+                if (key == null) {
+                    return new Packet[] { Packet.createError("Key Set Not Found", "No key set can be found for the specified user.") };
+                }
+
+                return new Packet[] {
+                        Packet.createPacket(
+                                Packet.TYPE_GET_USER_KEY,
+                                true,
+                                (JSONObject) key.get("publicKey")
+                        )
+                };
+            }
+
+            @Override
+            public Packet[] addToChat(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+
+                JSONObject request = packets[0].getData();
+
+                if (!request.containsKey("id") || !request.containsKey("chatId")) {
+                    return new Packet[] { Packet.createError("Invalid Format", "Request is missing some required fields!") };
+                }
+
+                request.put("id", request.get("id").getClass() == Long.class ? Math.toIntExact((long) request.get("id")) : request.get("id"));
+                request.put("chatId", request.get("chatId").getClass() == Long.class ? Math.toIntExact((long) request.get("chatId")) : request.get("chatId"));
+
+                // Verify that this user and the target user are friends
+                try {
+                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT * FROM Friends WHERE id = ? AND follower = ?");
+                    stmt.setInt(1, (int) handler.user.get("id"));
+                    stmt.setInt(2, (int) request.get("id"));
+                    stmt.execute();
+
+                    JSONObject[] results = Database.extractResultSet(stmt.getResultSet());
+                    if (results.length == 0) {
+                        return new Packet[] { Packet.createError("Request Rejected", "You are not friends with the target user.") };
+                    }
+                }
+                catch (SQLException e) {
+                    return new Packet[] { Packet.createError("Friend Verification Failed", "Failed to verify whether or not you and the target user are friends: " + e.getMessage()) };
+                }
+
+                // Verify that this user is a member of the chat, and has its key
+                try {
+                    if (KeyManager.getChatKey((int) handler.user.get("id"), (int) request.get("chatId")) == null) {
+                        throw new IllegalStateException();
+                    }
+                } catch (IOException | IllegalStateException e) {
+                    return new Packet[] { Packet.createError("Access Denied", " You do not have access to this chat sufficient to perform this action.") };
+                }
+
+                // Add the chat membership and key to the other user's records
+                try {
+                    KeyManager.addChatKey((int) request.get("id"), (int) request.get("chatId"), (String) request.get("key"));
+                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO ChatMemberships (`user`, `chatId`) VALUES (?, ?)");
+                    stmt.setInt(1, (int) request.get("id"));
+                    stmt.setInt(2, (int) request.get("chatId"));
+                    stmt.executeUpdate();
+
+                } catch (SQLException e) {
+                    return new Packet[] { Packet.createError("DB Error", "Failed to add the membership record to the database: " + e.getMessage()) };
+                } catch (IOException | IllegalStateException e) {
+                    return new Packet[] { Packet.createError("Key Submission Error", "Failed to add the key to the target user's key set: " + e.getMessage()) };
+                }
+
+                return new Packet[] { Packet.createPacket(
+                        Packet.TYPE_ADD_TO_CHAT,
+                        true,
+                        null
+                )};
             }
         };
     }
