@@ -80,6 +80,9 @@ public class Packet {
      *     the server will try cookie authentication, and upon failure will try credential authentication.
      * </p>
      * <h3>Response Format</h3>
+     * <p>
+     *     Note that the key pair field will be null if the user has no initialised key pair.
+     * </p>
      * <pre>
      *     {
      *         "id": Int,
@@ -88,7 +91,11 @@ public class Packet {
      *         "password": String,
      *         "pfpPath": String,
      *         "verified": Boolean,
-     *         "passwordUpdated": Boolean
+     *         "passwordUpdated": Boolean,
+     *         "keyPair": {  // Since version 5.0.0
+     *             "publicKey": <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a>,
+     *             "privateKey": Hex string representing an encrypted <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a>
+     *         }
      *     }
      * </pre>
      */
