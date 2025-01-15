@@ -90,13 +90,17 @@ public class KeyManager {
     /**
      * Initialise a new user key
      * @param userId The user ID who this key belongs to
-     * @param key The key in <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> format.
+     * @param publicKey The public key in <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> format.
+     * @param privateKey The private key as an encrypted hex string.
      */
-    public static void initUserKey(int userId, JSONObject key) throws IOException {
+    public static void initUserKey(int userId, JSONObject publicKey, String privateKey) throws IOException {
         JSONObject keyFile = getKeyFile();
 
         JSONObject newUserSet = new JSONObject();
-        newUserSet.put("userKey", key);
+        JSONObject userKey = new JSONObject();
+        userKey.put("publicKey", publicKey);
+        userKey.put("privateKey", privateKey);
+        newUserSet.put("userKey", userKey);
 
         keyFile.put(String.valueOf(userId), newUserSet);
         writeKeyFile(keyFile);

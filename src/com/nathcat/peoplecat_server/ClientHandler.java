@@ -99,10 +99,52 @@ public class ClientHandler extends ConnectionHandler {
                             handlerList.add(ch);
                         }
 
+                        try {
+                            PreparedStatement stmt = server.db.getPreparedStatement("SELECT follower FROM Friends WHERE id = ?");
+                            stmt.setInt(1, (int) handler.user.get("id"));
+                            stmt.execute();
+                            JSONObject[] friends = Database.extractResultSet(stmt.getResultSet());
+                            JSONObject user_notif_data = new JSONObject();
+                            user_notif_data.putAll(handler.user);
+                            user_notif_data.remove("password");
+                            user_notif_data.remove("verified");
+                            user_notif_data.remove("email");
+
+                            for (JSONObject jsonObject : friends) {
+                                //ClientHandler h = server.userToHandler.get((int) jsonObject.get("follower"));
+                                List<ClientHandler> followerList = server.userToHandler.get((int) jsonObject.get("follower"));
+
+                                if (followerList != null) followerList.forEach((ClientHandler h) -> h.writePacket(
+                                        Packet.createPacket(
+                                                Packet.TYPE_NOTIFICATION_USER_ONLINE,
+                                                true,
+                                                user_notif_data
+                                        )
+                                ));
+                            }
+                        }
+                        catch (SQLException e) {
+                            handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
+                        }
+
+                        JSONObject keyPair;
+                        try {
+                            keyPair = KeyManager.getUserKey((int) handler.user.get("id"));
+                        } catch (IOException e) {
+                            handler.log("\033[91;3mIO Error: " + e.getClass().getName() + "\033[0m");
+                            return new Packet[] { Packet.createError("Key Retrieval Error", e.getClass().getName() + " occurred while trying to get the requested key.") };
+                        } catch (IllegalStateException e) {
+                            keyPair = null;
+                        }
+
+                        JSONObject response = new JSONObject();
+                        response.putAll(handler.user);
+                        response.put("keyPair", keyPair);
+
                         return new Packet[] {Packet.createPacket(
                                 Packet.TYPE_AUTHENTICATE,
                                 true,
-                                handler.user
+                                response
                         )};
                     }
 
@@ -174,10 +216,24 @@ public class ClientHandler extends ConnectionHandler {
                     handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
                 }
 
+                JSONObject keyPair;
+                try {
+                    keyPair = KeyManager.getUserKey((int) handler.user.get("id"));
+                } catch (IOException e) {
+                    handler.log("\033[91;3mIO Error: " + e.getClass().getName() + "\033[0m");
+                    return new Packet[] { Packet.createError("Key Retrieval Error", e.getClass().getName() + " occurred while trying to get the requested key.") };
+                } catch (IllegalStateException e) {
+                    keyPair = null;
+                }
+
+                JSONObject response = new JSONObject();
+                response.putAll(handler.user);
+                response.put("keyPair", keyPair);
+
                 return new Packet[] {Packet.createPacket(
                         Packet.TYPE_AUTHENTICATE,
                         true,
-                        handler.user
+                        response
                 )};
             }
 
@@ -721,8 +777,8 @@ public class ClientHandler extends ConnectionHandler {
                 // Verify the request format is correct
                 JSONObject request = packets[0].getData();
 
-                if (!request.containsKey("newPublicKey")) {
-                    return new Packet[] { Packet.createError("Invalid Format", "You must specify the newPublicKey field!") };
+                if (!request.containsKey("newPublicKey") || !request.containsKey("newPrivateKey")) {
+                    return new Packet[] { Packet.createError("Invalid Format", "There are missing required fields from the payload!") };
                 }
 
                 //
@@ -730,7 +786,7 @@ public class ClientHandler extends ConnectionHandler {
                 //
 
                 try {
-                    KeyManager.initUserKey((int) handler.user.get("id"), (JSONObject) request.get("newPublicKey"));
+                    KeyManager.initUserKey((int) handler.user.get("id"), (JSONObject) request.get("newPublicKey"), (String) request.get("newPrivateKey"));
 
                 } catch (IOException e) {
                     handler.log("\033[91m;3mKey Init Error (Phase 1): " + e.getMessage() + "\033[0m");
@@ -786,7 +842,7 @@ public class ClientHandler extends ConnectionHandler {
                         Packet.createPacket(
                                 Packet.TYPE_GET_USER_KEY,
                                 true,
-                                key
+                                (JSONObject) key.get("publicKey")
                         )
                 };
             }

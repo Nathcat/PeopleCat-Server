@@ -608,11 +608,18 @@ public class Packet {
      *     Note that all encrypted data will be deleted upon this request's success. Meaning the user will no longer have
      *     access to their old chats.
      * </p>
+     * <p>
+     *     The user's asymmetric keypair should be generated on the client-side. The public key should be sent to the user
+     *     in an unencrypted JSON Web Key format, while the private key should be encrypted using a symmetric key derived
+     *     from the user's plaintext password using the <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/deriveKey#pbkdf2">PBKDF2 algorithm</a>,
+     *     and should be a <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/encrypt#aes-gcm">AES-GCM</a> key.
+     * </p>
      *
      * <h3>Payload format</h3>
      * <pre>
      *     {
-     *         "newPublicKey": <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a>
+     *         "newPublicKey": <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a>,
+     *         "newPrivateKey": Hex string representing a <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#json_web_key">JSON Web Key</a> encrypted with the user's symmetric key derived from their plaintext password
      *     }
      * </pre>
      *
