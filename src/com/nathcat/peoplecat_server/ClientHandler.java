@@ -384,7 +384,7 @@ public class ClientHandler extends ConnectionHandler {
 
                 JSONObject[] members;
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT `user`, pfpPath, fullName, chats.`name` AS 'chatName' FROM ChatMemberships JOIN SSO.Users ON `user` = SSO.Users.id JOIN chats ON ChatMemberships.`chatid` = chats.ChatID WHERE ChatMemberships.`chatid` = ?");
+                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT `user`, pfpPath, fullName, chats.`name` AS 'chatName' FROM ChatMemberships JOIN SSO.Users ON `user` = SSO.Users.id JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE ChatMemberships.`chatid` = ?");
                     stmt.setInt(1, chatID);
                     stmt.execute();
 
