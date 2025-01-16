@@ -1,9 +1,7 @@
 package com.nathcat.peoplecat_server;
 
-import com.mysql.cj.x.protobuf.MysqlxPrepare;
 import com.nathcat.AuthCat.AuthCat;
 import com.nathcat.AuthCat.Exceptions.InvalidResponse;
-import com.nathcat.messagecat_database.MessageQueue;
 import com.nathcat.messagecat_database_entities.Message;
 import com.nathcat.peoplecat_database.Database;
 import com.nathcat.peoplecat_database.KeyManager;
@@ -11,15 +9,11 @@ import com.nathcat.peoplecat_database.MessageBox;
 import org.java_websocket.WebSocket;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.net.Socket;
-import java.nio.file.FileSystemNotFoundException;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.*;
@@ -664,6 +658,7 @@ public class ClientHandler extends ConnectionHandler {
                 JSONObject d = new JSONObject();
                 d.put("version", Server.version);
                 d.put("serverTime", new Date().toString());
+                d.put("pushServicePublicKey", server.pushServicePublicKey.toString());
 
                 return new Packet[] { Packet.createPacket(
                         Packet.TYPE_GET_SERVER_INFO,
@@ -1008,5 +1003,17 @@ public class ClientHandler extends ConnectionHandler {
                 log("\033[91;3mSQL error! " + e.getMessage());
             }
         }
+    }
+
+    private class ClientNotAuthenticated extends Exception { }
+
+    /**
+     * Send a push notification to this handler's associated user
+     * @param content The content of the notification
+     */
+    public void sendPushNotification(JSONObject content) throws ClientNotAuthenticated {
+        if (!this.authenticated) throw new ClientNotAuthenticated();
+
+
     }
 }

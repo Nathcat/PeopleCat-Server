@@ -1,21 +1,37 @@
 package com.nathcat.peoplecat_database;
 
 import com.nathcat.peoplecat_server.Packet;
+import com.sun.tools.javac.Main;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.crypto.params.ECPrivateKeyParameters;
+import org.bouncycastle.crypto.params.ECPublicKeyParameters;
+import org.bouncycastle.crypto.util.PrivateKeyFactory;
+import org.bouncycastle.crypto.util.PublicKeyFactory;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.jce.spec.ECParameterSpec;
+import org.bouncycastle.jce.spec.ECPrivateKeySpec;
+import org.bouncycastle.jce.spec.ECPublicKeySpec;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.security.*;
+import java.security.spec.InvalidKeySpecException;
+import java.util.Objects;
 
 /**
  * Utility class for managing encryption keys
  */
 public class KeyManager {
     private static final String KEY_FILE_PATH = "Assets/Data/Keys.json";
+    public static final String VAPID_PUBLIC_KEY_PATH = "Assets/vapid_public.pem";
+    public static final String VAPID_PRIVATE_KEY_PATH = "Assets/vapid_private.pem";
 
     /**
      * Get the key file, if it does not exist, initialise the key file with an empty JSON set.
@@ -132,5 +148,60 @@ public class KeyManager {
         userKeys.put("chatKeys", chatKeys);
         keyFile.put(String.valueOf(userId), userKeys);
         writeKeyFile(keyFile);
+    }
+
+    /**
+     * Read a public EC key from a PEM file
+     * @param path The path to the PEM file
+     * @return The EC public key contained within the PEM file
+     * @throws IOException
+     */
+    public static PublicKey readPublicECPEM(String path) throws IOException {
+        InputStreamReader isr = new InputStreamReader(new FileInputStream(path));
+        PEMParser parser = new PEMParser(isr);
+        SubjectPublicKeyInfo obj = (SubjectPublicKeyInfo) parser.readObject();
+        ECPublicKeyParameters publicInfo = (ECPublicKeyParameters) PublicKeyFactory.createKey(obj);
+        KeyFactory keyFactory = null;
+        try {
+            keyFactory = KeyFactory.getInstance("EC");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+
+        ECParameterSpec publicParams = new ECParameterSpec(publicInfo.getParameters().getCurve(), publicInfo.getParameters().getG(), publicInfo.getParameters().getN(), publicInfo.getParameters().getH());
+        ECPublicKeySpec ecPublicKeySpec = new ECPublicKeySpec(publicInfo.getQ(), publicParams);
+        try {
+            return keyFactory.generatePublic(ecPublicKeySpec);
+        } catch (InvalidKeySpecException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Read a private EC key from a PEM file
+     * @param path The path to the PEM file
+     * @return The private EC key contained within the PEM file
+     * @throws IOException
+     */
+    public static PrivateKey readPrivateECPEM(String path) throws IOException {
+        InputStreamReader isr = new InputStreamReader(new FileInputStream(path));
+        PEMParser parser = new PEMParser(isr);
+        PEMKeyPair kp = (PEMKeyPair) parser.readObject();
+        ECPrivateKeyParameters privateInfo = (ECPrivateKeyParameters) PrivateKeyFactory.createKey(kp.getPrivateKeyInfo());
+
+        KeyFactory keyFactory = null;
+        try {
+            keyFactory = KeyFactory.getInstance("EC");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+
+        ECParameterSpec privateParams = new ECParameterSpec(privateInfo.getParameters().getCurve(), privateInfo.getParameters().getG(), privateInfo.getParameters().getN(), privateInfo.getParameters().getH());
+        ECPrivateKeySpec ecPrivateKeySpec = new ECPrivateKeySpec(privateInfo.getD(), privateParams);
+        try {
+            return keyFactory.generatePrivate(ecPrivateKeySpec);
+        } catch (InvalidKeySpecException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -1,6 +1,11 @@
 package com.nathcat.peoplecat_server;
 
 import com.nathcat.peoplecat_database.Database;
+import com.nathcat.peoplecat_database.KeyManager;
+import nl.martijndwars.webpush.Notification;
+import nl.martijndwars.webpush.PushAsyncService;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.jose4j.lang.JoseException;
 import org.json.simple.parser.ParseException;
 
 import java.io.IOException;
@@ -8,10 +13,11 @@ import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.*;
+import java.security.spec.InvalidKeySpecException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 
 
@@ -73,6 +79,8 @@ public class Server {
     public int port;
     public int threadCount;
     public boolean useSSL;
+    public PushAsyncService pushService;
+    public PublicKey pushServicePublicKey;
     public Database db;
     public ArrayList<ClientHandler> handlers = new ArrayList<>();
     /**
@@ -109,7 +117,6 @@ public class Server {
                 }
 
                 case "--no-ssl" -> {
-                    i++;
                     useSSL = false;
                 }
 
@@ -142,6 +149,13 @@ public class Server {
         // This is a small worker thread which cleans the handler array by removing inactive handlers.
         Thread cleanerThread = new HandlerCleanerThread();
         cleanerThread.start();
+
+        Security.addProvider(new BouncyCastleProvider());
+
+        pushService = new PushAsyncService();
+        pushServicePublicKey = KeyManager.readPublicECPEM(KeyManager.VAPID_PUBLIC_KEY_PATH);
+        pushService.setPublicKey(pushServicePublicKey);
+        pushService.setPrivateKey(KeyManager.readPrivateECPEM(KeyManager.VAPID_PRIVATE_KEY_PATH));
 
         ServerSocket ss = new ServerSocket(port);
 
