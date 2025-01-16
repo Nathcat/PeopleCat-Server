@@ -23,12 +23,16 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
  * Utility class for managing encryption keys
  */
 public class KeyManager {
+    private static final char[] nibbleToHex = new char[] {
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+    };
     private static final String KEY_FILE_PATH = "Assets/Data/Keys.json";
     public static final String VAPID_PUBLIC_KEY_PATH = "Assets/vapid_public.pem";
     public static final String VAPID_PRIVATE_KEY_PATH = "Assets/vapid_private.pem";
@@ -157,10 +161,7 @@ public class KeyManager {
      * @throws IOException
      */
     public static PublicKey readPublicECPEM(String path) throws IOException {
-        InputStreamReader isr = new InputStreamReader(new FileInputStream(path));
-        PEMParser parser = new PEMParser(isr);
-        SubjectPublicKeyInfo obj = (SubjectPublicKeyInfo) parser.readObject();
-        ECPublicKeyParameters publicInfo = (ECPublicKeyParameters) PublicKeyFactory.createKey(obj);
+        ECPublicKeyParameters publicInfo = ecPublicKeyParameters(path);
         KeyFactory keyFactory = null;
         try {
             keyFactory = KeyFactory.getInstance("EC");
@@ -170,6 +171,7 @@ public class KeyManager {
 
         ECParameterSpec publicParams = new ECParameterSpec(publicInfo.getParameters().getCurve(), publicInfo.getParameters().getG(), publicInfo.getParameters().getN(), publicInfo.getParameters().getH());
         ECPublicKeySpec ecPublicKeySpec = new ECPublicKeySpec(publicInfo.getQ(), publicParams);
+
         try {
             return keyFactory.generatePublic(ecPublicKeySpec);
         } catch (InvalidKeySpecException e) {
@@ -203,5 +205,60 @@ public class KeyManager {
         } catch (InvalidKeySpecException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Get the EC public key parameters from the specified PEM key path
+     * @param path The path to the PEM file
+     * @return <code>ECPublicKeyParameters</code>
+     * @throws FileNotFoundException
+     */
+    public static ECPublicKeyParameters ecPublicKeyParameters(String path) throws FileNotFoundException {
+        InputStreamReader isr = new InputStreamReader(new FileInputStream(KeyManager.VAPID_PUBLIC_KEY_PATH));
+        PEMParser parser = new PEMParser(isr);
+        SubjectPublicKeyInfo obj = null;
+        try {
+            obj = (SubjectPublicKeyInfo) parser.readObject();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            return (ECPublicKeyParameters) PublicKeyFactory.createKey(obj);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Read the uncompressed EC public key from a specified PEM file path
+     * @param path The path to the PEM file
+     * @return A hex string of the uncompressed EC public key
+     */
+    public static String ecPublicKeyUncompressed(String path) throws FileNotFoundException {
+        return ecPublicKeyUncompressed(ecPublicKeyParameters(path));
+    }
+
+    /**
+     * Read the uncompressed EC public key from the public key parameters
+     * @param publicInfo The public key parameters
+     * @return A hex string of the uncompressed EC public key
+     */
+    public static String ecPublicKeyUncompressed(ECPublicKeyParameters publicInfo) {
+        byte[] x = publicInfo.getQ().getXCoord().toBigInteger().toByteArray();
+        byte[] y = publicInfo.getQ().getYCoord().toBigInteger().toByteArray();
+        byte[] buffer = new byte[65];
+
+        buffer[0] = 4;
+        System.arraycopy(x, 0, buffer, 1 , 32);
+        System.arraycopy(y, 1, buffer, 33, 32);
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < buffer.length; i++) {
+            if (i != 0) sb.append(':');
+            sb.append(nibbleToHex[(buffer[i] & 0xF0) >> 4]);
+            sb.append(nibbleToHex[buffer[i] & 0xF]);
+        }
+
+        return sb.toString();
     }
 }

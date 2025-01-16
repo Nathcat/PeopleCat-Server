@@ -6,6 +6,7 @@ import com.nathcat.peoplecat_server.ConnectionHandler;
 import com.nathcat.peoplecat_server.IPacketHandler;
 import com.nathcat.peoplecat_server.Packet;
 import com.nathcat.peoplecat_server.Server;
+import nl.martijndwars.webpush.Base64Encoder;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.params.ECPrivateKeyParameters;
@@ -18,10 +19,12 @@ import org.bouncycastle.jce.spec.ECPrivateKeySpec;
 import org.bouncycastle.jce.spec.ECPublicKeySpec;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
+import org.jose4j.json.JsonUtil;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 import javax.crypto.Cipher;
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -33,13 +36,44 @@ import java.security.PublicKey;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Date;
 
 public class Test {
+    public static char[] nibbleToHex = new char[] {
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+    };
+
     public static void main(String[] args) throws Exception {
         Security.addProvider(new BouncyCastleProvider());
 
-        PublicKey key = KeyManager.readPublicECPEM(KeyManager.VAPID_PUBLIC_KEY_PATH);
+        InputStreamReader isr = new InputStreamReader(new FileInputStream(KeyManager.VAPID_PUBLIC_KEY_PATH));
+        PEMParser parser = new PEMParser(isr);
+        SubjectPublicKeyInfo obj = (SubjectPublicKeyInfo) parser.readObject();
+        ECPublicKeyParameters publicInfo = (ECPublicKeyParameters) PublicKeyFactory.createKey(obj);
+
+        byte[] x = publicInfo.getQ().getXCoord().toBigInteger().toByteArray();
+        byte[] y = publicInfo.getQ().getYCoord().toBigInteger().toByteArray();
+        byte[] buffer = new byte[65];
+
+        System.out.println(Arrays.toString(x));
+        System.out.println(x.length);
+        System.out.println(Arrays.toString(y));
+        System.out.println(y.length);
+        buffer[0] = 4;
+        System.arraycopy(x, 0, buffer, 1 , 32);
+        System.arraycopy(y, 1, buffer, 33, 32);
+
+        System.out.println(Arrays.toString(buffer));
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < buffer.length; i++) {
+            if (i != 0) sb.append(':');
+            sb.append(nibbleToHex[(buffer[i] & 0xF0) >> 4]);
+            sb.append(nibbleToHex[buffer[i] & 0xF]);
+        }
+
+        System.out.println(sb.toString());
     }
 }
 

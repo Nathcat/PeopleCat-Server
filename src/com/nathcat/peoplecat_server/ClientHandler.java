@@ -658,7 +658,11 @@ public class ClientHandler extends ConnectionHandler {
                 JSONObject d = new JSONObject();
                 d.put("version", Server.version);
                 d.put("serverTime", new Date().toString());
-                d.put("pushServicePublicKey", server.pushServicePublicKey.toString());
+                try {
+                    d.put("pushServicePublicKey", KeyManager.ecPublicKeyUncompressed(KeyManager.VAPID_PUBLIC_KEY_PATH));
+                } catch (FileNotFoundException e) {
+                    d.put("pushServicePublicKey", null);
+                }
 
                 return new Packet[] { Packet.createPacket(
                         Packet.TYPE_GET_SERVER_INFO,

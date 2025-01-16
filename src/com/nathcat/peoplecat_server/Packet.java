@@ -514,7 +514,8 @@ public class Packet {
      * <pre>
      *     {
      *         "version": String,
-     *         "serverTime": String,    // Pre 4.2.0 this is named server-time
+     *         "serverTime": String,            // Pre 4.2.0 this is named server-time
+     *         "pushServicePublicKey": String   // Present from 5.0.0
      *     }
      * </pre>
      */
