@@ -382,24 +382,22 @@ public class ClientHandler extends ConnectionHandler {
                 Packet notifyPacket = Packet.createPacket(Packet.TYPE_NOTIFICATION_MESSAGE, true, notification);
                 ClientHandler ch = (ClientHandler) handler;
 
-                int[] members;
+                JSONObject[] members;
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT `user` FROM ChatMemberships WHERE `chatid` = ?");
+                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT `user`, pfpPath, fullName, chats.`name` AS 'chatName' FROM ChatMemberships JOIN SSO.Users ON `user` = SSO.Users.id JOIN chats ON ChatMemberships.`chatid` = chats.ChatID WHERE ChatMemberships.`chatid` = ?");
                     stmt.setInt(1, chatID);
                     stmt.execute();
 
-                    JSONObject[] results = Database.extractResultSet(stmt.getResultSet());
-                    members = new int[results.length];
-                    for (int i = 0; i < results.length; i++) {
-                        members[i] = (int) results[i].get("user");
-                    }
+                    members = Database.extractResultSet(stmt.getResultSet());
                 }
                 catch (SQLException e) {
                     handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()));
                     return new Packet[] { Packet.createError("Database Error", e.getMessage()) };
                 }
 
-                for (int userID : members) {
+                for (JSONObject member : members) {
+                    int userID = (int) member.get("user");
+
                     // Removing this condition will allow multiple clients connected under the same user
                     // to receive messages from each other.
 
@@ -409,6 +407,13 @@ public class ClientHandler extends ConnectionHandler {
 
                     List<ClientHandler> handlerList = ch.server.userToHandler.get(userID);
                     if (handlerList != null) handlerList.forEach((ClientHandler h) -> h.writePacket(notifyPacket));
+
+                    JSONObject content = new JSONObject();
+                    content.put("content", msgJSON.get("content"));
+                    content.put("senderName", member.get("fullName"));
+                    content.put("senderPfp", member.get("pfpPath"));
+                    content.put("chatName", member.get("chatName"));
+                    server.sendPushNotification(userID, content);
                 }
 
                 return new Packet[] {Packet.createPing()};
@@ -683,7 +688,7 @@ public class ClientHandler extends ConnectionHandler {
 
                 Packet[] stream;
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT Chats.ChatID AS `chatId`, Name AS `name`, JoinCode AS `joinCode`, Icon AS `icon`, isPrivate FROM ChatMemberships INNER JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE `user` = ?");
+                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT Chats.ChatID AS `chatId`, Name AS `name`, Icon AS `icon`, isPrivate FROM ChatMemberships INNER JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE `user` = ?");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.execute();
                     JSONObject[] results = Database.extractResultSet(stmt.getResultSet());
