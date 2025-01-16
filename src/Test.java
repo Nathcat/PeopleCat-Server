@@ -196,6 +196,16 @@ class TestHandler extends ConnectionHandler {
             public Packet[] addToChat(ConnectionHandler handler, Packet[] packets) {
                 return new Packet[0];
             }
+
+            @Override
+            public Packet[] pushSubscribe(ConnectionHandler handler, Packet[] packets) {
+                return new Packet[0];
+            }
+
+            @Override
+            public Packet[] pushUnsubscribe(ConnectionHandler handler, Packet[] packets) {
+                return new Packet[0];
+            }
         });
     }
 

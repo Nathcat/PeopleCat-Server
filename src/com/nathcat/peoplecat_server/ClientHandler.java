@@ -1,19 +1,24 @@
 package com.nathcat.peoplecat_server;
 
+import com.mysql.cj.x.protobuf.MysqlxPrepare;
 import com.nathcat.AuthCat.AuthCat;
 import com.nathcat.AuthCat.Exceptions.InvalidResponse;
 import com.nathcat.messagecat_database_entities.Message;
 import com.nathcat.peoplecat_database.Database;
 import com.nathcat.peoplecat_database.KeyManager;
 import com.nathcat.peoplecat_database.MessageBox;
+import nl.martijndwars.webpush.Notification;
 import org.java_websocket.WebSocket;
+import org.jose4j.lang.JoseException;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.Socket;
+import java.security.GeneralSecurityException;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.*;
@@ -905,6 +910,68 @@ public class ClientHandler extends ConnectionHandler {
                         null
                 )};
             }
+
+            @Override
+            public Packet[] pushSubscribe(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+
+                JSONObject request = packets[0].getData();
+                if (!request.containsKey("endpoint") || !request.containsKey("auth") || !request.containsKey("key")) {
+                    return new Packet[] { Packet.createError("Invalid Format", "You are missing some required fields!") };
+                }
+
+                int id;
+
+                try {
+                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO PushSubscriptions (`user`, endpoint, `key`, auth) VALUES (?, ?, ?, ?)");
+                    stmt.setInt(1, (int) handler.user.get("id"));
+                    stmt.setString(2, (String) request.get("endpoint"));
+                    stmt.setString(3, (String) request.get("key"));
+                    stmt.setString(4, (String) request.get("auth"));
+                    stmt.executeUpdate();
+                    ResultSet rs = stmt.getGeneratedKeys();
+                    rs.next(); id = rs.getInt(1);
+
+                } catch (SQLException e) {
+                    return new Packet[] { Packet.createError("DB Error", "Failed to add the subscription record to the database: " + e.getMessage()) };
+                }
+
+
+                JSONObject r = new JSONObject();
+                r.put("id", id);
+
+                return new Packet[] {
+                        Packet.createPacket(
+                                Packet.TYPE_PUSH_SUBSCRIBE,
+                                true,
+                                r
+                        )
+                };
+            }
+
+            @Override
+            public Packet[] pushUnsubscribe(ConnectionHandler handler, Packet[] packets) {
+                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
+                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+
+                JSONObject request = packets[0].getData();
+                if (!request.containsKey("id")) {
+                    return new Packet[] { Packet.createError("Invalid Format", "You must specify the id field!") };
+                }
+
+                try {
+                    PreparedStatement stmt = server.db.getPreparedStatement("DELETE FROM PushSubscriptions WHERE id = ? AND `user` = ?");
+                    stmt.setInt(1, Math.toIntExact((long) request.get("id")));
+                    stmt.setInt(2, (int) handler.user.get("id"));
+                    stmt.executeUpdate();
+                }
+                catch (SQLException e) {
+                    return new Packet[] { Packet.createError("DB Error", "Failed to remove the subscription record to the database: " + e.getMessage()) };
+                }
+
+                return new Packet[] { Packet.createPacket(Packet.TYPE_PUSH_UNSUBSCRIBE, true, null) };
+            }
         };
     }
 
@@ -1007,17 +1074,5 @@ public class ClientHandler extends ConnectionHandler {
                 log("\033[91;3mSQL error! " + e.getMessage());
             }
         }
-    }
-
-    private class ClientNotAuthenticated extends Exception { }
-
-    /**
-     * Send a push notification to this handler's associated user
-     * @param content The content of the notification
-     */
-    public void sendPushNotification(JSONObject content) throws ClientNotAuthenticated {
-        if (!this.authenticated) throw new ClientNotAuthenticated();
-
-
     }
 }

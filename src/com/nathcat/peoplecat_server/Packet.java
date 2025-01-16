@@ -683,6 +683,61 @@ public class Packet {
      */
     public static final int TYPE_ADD_TO_CHAT = 21;
 
+    /**
+     * <p>Since version 5.0.0</p>
+     * <h3>Purpose</h3>
+     * <p>
+     *     Allows a client to subscribe to the push notification service.
+     * </p>
+     * <h3>Payload format</h3>
+     * <p>
+     *     Clients should supply the subscription information supplied to them from their relevant push notification service.
+     * </p>
+     * <pre>
+     *     {
+     *         "endpoint": String,
+     *         "key": String,
+     *         "auth": String
+     *     }
+     * </pre>
+     * <h3>Response format</h3>
+     * <p>
+     *     The client will reply with one field, the subscription <code>id</code>, clients should store this long term to
+     *     make use of the <code>TYPE_PUSH_UNSUBSCRIBE</code> request. Having a unique <code>id</code> per subscription makes
+     *     it possible for users to be subscribed to push notifications on multiple clients at the same time, but does
+     *     mean that each client will have to store the <code>id</code> for their subscription, at least while that
+     *     subscription is valid.
+     * </p>
+     * <pre>
+     *     {
+     *         "id": Integer
+     *     }
+     * </pre>
+     */
+    public static final int TYPE_PUSH_SUBSCRIBE = 22;
+
+    /**
+     * <h3>Purpose</h3>
+     * <p>
+     *     Allows a client to unsubscribe from the push notification service.
+     * </p>
+     * <h3>Payload format</h3>
+     * <p>
+     *     Clients should supply the <code>id</code> given to them when they subscribed to the service.
+     * </p>
+     * <pre>
+     *     {
+     *         "id": Integer
+     *     }
+     * </pre>
+     * <h3>Response format</h3>
+     * <p>
+     *     The server will either respond with an empty packet of the same type to indicate success, or an error packet
+     *     detailing the failiure.
+     * </p>
+     */
+    public static final int TYPE_PUSH_UNSUBSCRIBE = 23;
+
 
     /**
      * The type of request specified by the packet

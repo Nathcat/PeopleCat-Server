@@ -143,7 +143,7 @@ public class Database {
     public PreparedStatement getPreparedStatement(String q) throws SQLException {
         try {
             if (conn.isClosed()) StartMySQLConnection();
-            return conn.prepareStatement(q);
+            return conn.prepareStatement(q, Statement.RETURN_GENERATED_KEYS);
         }
         catch (CommunicationsException e) {
             StartMySQLConnection();

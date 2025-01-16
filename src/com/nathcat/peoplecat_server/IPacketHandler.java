@@ -194,6 +194,24 @@ public interface IPacketHandler {
     Packet[] addToChat(ConnectionHandler handler, Packet[] packets);
 
     /**
+     * Handles a request to subscribe to the push notification service
+     * @param handler The handler handling the connection
+     * @param packets The packet sequence from the endpoint
+     * @return The packet sequence to reply with
+     * @see Packet#TYPE_PUSH_SUBSCRIBE
+     */
+    Packet[] pushSubscribe(ConnectionHandler handler, Packet[] packets);
+
+    /**
+     * Handles a request to unsubscribe from the push notification service
+     * @param handler The handler handling the connection
+     * @param packets The packet sequence from the endpoint
+     * @return The packet sequence to reply with
+     * @see Packet#TYPE_PUSH_UNSUBSCRIBE
+     */
+    Packet[] pushUnsubscribe(ConnectionHandler handler, Packet[] packets);
+
+    /**
      * Handle a packet sequence by determining which handler method to pass it to. Uses the type of the first packet
      * in the sequence to determine the appropriate handler method.
      * @param handler The ConnectionHandler handling the connection
@@ -224,6 +242,8 @@ public interface IPacketHandler {
             case Packet.TYPE_INIT_USER_KEY -> initUserKey(handler, packets);
             case Packet.TYPE_GET_USER_KEY -> getUserKey(handler, packets);
             case Packet.TYPE_ADD_TO_CHAT -> addToChat(handler, packets);
+            case Packet.TYPE_PUSH_SUBSCRIBE -> pushSubscribe(handler, packets);
+            case Packet.TYPE_PUSH_UNSUBSCRIBE -> pushUnsubscribe(handler, packets);
 
             default -> throw new IllegalStateException("Unexpected value: " + packets[0].type);
         };

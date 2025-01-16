@@ -1,11 +1,13 @@
 package com.nathcat.peoplecat_server;
 
+import com.mysql.cj.x.protobuf.MysqlxPrepare;
 import com.nathcat.peoplecat_database.Database;
 import com.nathcat.peoplecat_database.KeyManager;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushAsyncService;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.jose4j.lang.JoseException;
+import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
 import java.io.IOException;
@@ -15,6 +17,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -190,6 +193,32 @@ public class Server {
     public void startCleaner(boolean livingHandlerMode) {
         handlerCleaner = new HandlerCleanerThread(livingHandlerMode);
         handlerCleaner.start();
+    }
+
+    /**
+     * Send a push notification to the given user
+     * @param userId The user ID
+     * @param content The content of the push notification
+     */
+    public void sendPushNotification(int userId, JSONObject content) {
+        try {
+            PreparedStatement stmt = db.getPreparedStatement("SELECT * FROM PushSubscriptions WHERE `user` = ?");
+            stmt.setInt(1, userId);
+            stmt.execute();
+            JSONObject[] results = Database.extractResultSet(stmt.getResultSet());
+
+            for (int i = 0; i < results.length; i++) {
+                pushService.send(new Notification(
+                        (String) results[i].get("endpoint"),
+                        (String) results[i].get("key"),
+                        (String) results[i].get("auth"),
+                        content.toJSONString()
+                ));
+            }
+        }
+        catch (SQLException | JoseException | GeneralSecurityException | IOException e) {
+            log("\033[91;3mAn error occurred when sending push notifications to user " + userId + ": " + e.getClass().getName() + " " + e.getMessage() + "\n" + stringifyStackTrace(e.getStackTrace()) + "\033[0m");
+        }
     }
 
     public static void log(Object message) {
