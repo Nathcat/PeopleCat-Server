@@ -446,7 +446,7 @@ public class ClientHandler extends ConnectionHandler {
                     return new Packet[] {Packet.createError("Server error", e.getMessage())};
                 }
 
-                if ((long) chat.get("isPrivate") == 1) {
+                if ((boolean) chat.get("isPrivate")) {
                     return new Packet[] {Packet.createError("Access Denied", "You do not have access to this chat!")};
                 }
 
