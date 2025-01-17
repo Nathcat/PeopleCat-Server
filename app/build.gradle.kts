@@ -46,12 +46,3 @@ application {
     // Define the main class for the application.
     mainClass = "com.nathcat.peoplecat_server.WebSocketHandler"
 }
-
-tasks.register<Jar>("serverJar") {
-    
-    manifest {
-        attributes(mapOf("Main-Class" to application.mainClass))
-    }
-
-    from(project.the<SourceSetContainer>()["main"].compileClasspath + project.the<SourceSetContainer>()["main"].output)
-}
