@@ -689,6 +689,17 @@ public class Packet {
      * <p>
      *     Allows a client to subscribe to the push notification service.
      * </p>
+     * <p>
+     *     While subscribed to the service, the client will receive push notifications with content in the following format:
+     * </p>
+     * <pre>
+     *     {
+     *          "content": String,
+     *          "senderName": String,
+     *          "senderPfp": String,
+     *          "chatName": String
+     *     }
+     * </pre>
      * <h3>Payload format</h3>
      * <p>
      *     Clients should supply the subscription information supplied to them from their relevant push notification service.
