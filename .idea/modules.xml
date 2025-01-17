@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="ProjectModuleManager">
-    <modules>
-      <module fileurl="file://$PROJECT_DIR$/AuthCat/AuthCat.iml" filepath="$PROJECT_DIR$/AuthCat/AuthCat.iml" />
-      <module fileurl="file://$PROJECT_DIR$/PeopleCat-Server.iml" filepath="$PROJECT_DIR$/PeopleCat-Server.iml" />
-    </modules>
-  </component>
-</project>
