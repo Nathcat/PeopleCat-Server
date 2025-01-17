@@ -47,17 +47,23 @@ public class AuthCat {
     /**
      * Call the authentication service from AuthCat.
      * @param authEntry The supplied authentication data, should contain a username and password field
-     * @return The JSON data returned by the service
+     * @return The AuthResult
      * @throws IOException Thrown if an I/O error occurs when communicating with the service
      * @throws InterruptedException Thrown if the connection with the service is interrupted
      * @throws InvalidResponse Thrown if the service responds with an unexpected or invalid response code
      */
-    public static JSONObject tryLogin(JSONObject authEntry) throws IOException, InterruptedException, InvalidResponse {
+    public static AuthResult tryLogin(JSONObject authEntry) throws IOException, InterruptedException, InvalidResponse {
         HttpResponse<String> response = sendRequest("https://data.nathcat.net/sso/try-login.php", authEntry);
 
         if (response.statusCode() == 200) {
             try {
-                return (JSONObject) new JSONParser().parse(response.body());
+                JSONObject data = (JSONObject) new JSONParser().parse(response.body());
+                if (data.get("status").equals("success")) {
+                    return new AuthResult((JSONObject) data.get("user"));
+                }
+                else {
+                    return new AuthResult();
+                }
             }
             catch (ParseException e) {
                 throw new RuntimeException(e);
@@ -68,7 +74,7 @@ public class AuthCat {
         }
     }
 
-    public static JSONObject loginWithCookie(String cookie) throws IOException, InterruptedException, InvalidResponse {
+    public static AuthResult loginWithCookie(String cookie) throws IOException, InterruptedException, InvalidResponse {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://data.nathcat.net/sso/get-session.php"))
@@ -80,10 +86,10 @@ public class AuthCat {
         if (response.statusCode() == 200) {
             String body = response.body();
 
-            if (body.contentEquals("[]")) return null;
+            if (body.contentEquals("[]")) return new AuthResult();
 
             try {
-                return (JSONObject) ((JSONObject) new JSONParser().parse(body)).get("user");
+                return new AuthResult((JSONObject) ((JSONObject) new JSONParser().parse(body)).get("user"));
             }
             catch (ParseException e) {
                 throw new RuntimeException(e);
@@ -116,5 +122,33 @@ public class AuthCat {
         else {
             throw new InvalidResponse(response.statusCode());
         }
+    }
+
+    /**
+     * Send an authentication request to AuthCat
+     * @param user The user data
+     * @return The AuthResult returned from the authentication request
+     */
+    public static AuthResult tryAuthenticate(JSONObject user) {
+        // Attempt to log in with AuthCat
+        AuthResult authCatResponse;
+
+        try {
+            if (user.containsKey("cookieAuth")) {
+                authCatResponse = AuthCat.loginWithCookie((String) user.get("cookieAuth"));
+
+                if (!authCatResponse.result && user.containsKey("username") && user.containsKey("password")) {
+                    // Try normal authentication
+                    user.remove("cookieAuth");
+                    authCatResponse = tryAuthenticate(user);
+                }
+            } else {
+                authCatResponse = AuthCat.tryLogin(user);
+            }
+        } catch (InvalidResponse | IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        return authCatResponse;
     }
 }

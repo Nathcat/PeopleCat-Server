@@ -1,6 +1,6 @@
 package com.nathcat.peoplecat_server;
 
-import com.nathcat.AuthCat.AuthCat;
+import com.nathcat.AuthCat.*;
 import com.nathcat.AuthCat.Exceptions.InvalidResponse;
 import com.nathcat.messagecat_database_entities.Message;
 import com.nathcat.peoplecat_database.Database;
@@ -40,7 +40,8 @@ public class ClientHandler extends ConnectionHandler {
         log("Got connection.");
     }
 
-    public ClientHandler(Server server, WebSocket client, WebSocketOutputStream os, WebSocketInputStream is) throws IOException {
+    public ClientHandler(Server server, WebSocket client, WebSocketOutputStream os, WebSocketInputStream is)
+            throws IOException {
         super(client, os, is, null);
         this.server = server;
         packetHandler = createPacketHandler();
@@ -65,129 +66,42 @@ public class ClientHandler extends ConnectionHandler {
             public Packet[] authenticate(ConnectionHandler handler, Packet[] packets) {
                 // Check that there is only one packet in the request
                 if (packets.length > 1) {
-                    return new Packet[] {Packet.createError("Invalid data type", "Auth request does not accept multi-packet arrays.")};
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Auth request does not accept multi-packet arrays.") };
                 }
 
                 // Get the data from the single packet
                 JSONObject user = packets[0].getData();
 
-                if (user.containsKey("cookieAuth")) {
-                    String cookie = (String) user.get("cookieAuth");
-                    JSONObject r;
-                    try {
-                        r = AuthCat.loginWithCookie(cookie);
+                // Send the request to AuthCat
+                AuthResult authCatResponse = AuthCat.tryAuthenticate(user);
+                handler.log("Got response from AuthCat: " + authCatResponse);
 
-                    } catch (IOException | InterruptedException | InvalidResponse e) {
-                        throw new RuntimeException(e);
-                    }
-
-                    if (r != null) {
-                        handler.authenticated = true;
-                        handler.user = r;
-                        handler.user.put("id", Math.toIntExact((long) handler.user.get("id")));
-                        ClientHandler ch = (ClientHandler) handler;
-
-                        List<ClientHandler> handlerList = ch.server.userToHandler.get((int) handler.user.get("id"));
-                        if (handlerList == null) {
-                            handlerList = Collections.synchronizedList(new LinkedList<>());
-                            handlerList.add(ch);
-                            ch.server.userToHandler.put((int) handler.user.get("id"), handlerList);
-                        }
-                        else {
-                            handlerList.add(ch);
-                        }
-
-                        try {
-                            PreparedStatement stmt = server.db.getPreparedStatement("SELECT follower FROM Friends WHERE id = ?");
-                            stmt.setInt(1, (int) handler.user.get("id"));
-                            stmt.execute();
-                            JSONObject[] friends = Database.extractResultSet(stmt.getResultSet());
-                            JSONObject user_notif_data = new JSONObject();
-                            user_notif_data.putAll(handler.user);
-                            user_notif_data.remove("password");
-                            user_notif_data.remove("verified");
-                            user_notif_data.remove("email");
-
-                            for (JSONObject jsonObject : friends) {
-                                //ClientHandler h = server.userToHandler.get((int) jsonObject.get("follower"));
-                                List<ClientHandler> followerList = server.userToHandler.get((int) jsonObject.get("follower"));
-
-                                if (followerList != null) followerList.forEach((ClientHandler h) -> h.writePacket(
-                                        Packet.createPacket(
-                                                Packet.TYPE_NOTIFICATION_USER_ONLINE,
-                                                true,
-                                                user_notif_data
-                                        )
-                                ));
-                            }
-                        }
-                        catch (SQLException e) {
-                            handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
-                        }
-
-                        JSONObject keyPair;
-                        try {
-                            keyPair = KeyManager.getUserKey((int) handler.user.get("id"));
-                        } catch (IOException e) {
-                            handler.log("\033[91;3mIO Error: " + e.getClass().getName() + "\033[0m");
-                            return new Packet[] { Packet.createError("Key Retrieval Error", e.getClass().getName() + " occurred while trying to get the requested key.") };
-                        } catch (IllegalStateException e) {
-                            keyPair = null;
-                        }
-
-                        JSONObject response = new JSONObject();
-                        response.putAll(handler.user);
-                        response.put("keyPair", keyPair);
-
-                        return new Packet[] {Packet.createPacket(
-                                Packet.TYPE_AUTHENTICATE,
-                                true,
-                                response
-                        )};
-                    }
-
-                    // If we get here, then cookie authentication has failed, and we will attempt normal credential
-                    // authentication.
+                // If the response is a failed authentication, respond with an error packet
+                if (!authCatResponse.result) {
+                    return new Packet[] { Packet.createError("Auth Failed", "Failed to authenticate with the given information.") };
                 }
 
-                // Assert that the packet data contains a username and password field
-                try {
-                    assert user.containsKey("username");
-                    assert user.containsKey("password");
-                } catch (AssertionError e) {
-                    return new Packet[] {Packet.createError("Invalid JSON provided", "The data provided does not contain the correct data, an Auth request requires both the user's username and password to complete.")};
-                }
-
-                // Attempt to log in with AuthCat
-                JSONObject authCatResponse;
-                try {
-                    authCatResponse = AuthCat.tryLogin(user);
-                } catch (InvalidResponse | IOException | InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-
-                handler.log("Got response from AuthCat: " + authCatResponse.toJSONString());
-
-                // Check the response from the service
-                if (((String)authCatResponse.get("status")).contentEquals("fail")) {
-                    handler.authenticated = false;
-                    return new Packet[] {Packet.createError("Auth failed", (String) authCatResponse.get("message"))};
-                }
-
+                // Authentication successful, set relevant handler fields
                 handler.authenticated = true;
-                handler.user = (JSONObject) authCatResponse.get("user");
+                handler.user = authCatResponse.user;
                 handler.user.put("id", Math.toIntExact((long) handler.user.get("id")));
+
+                // Add this user to the handler list
                 ClientHandler ch = (ClientHandler) handler;
                 List<ClientHandler> handlerList = ch.server.userToHandler.get((int) handler.user.get("id"));
-                if (handlerList != null) handlerList.add(ch);
+                if (handlerList != null)
+                    handlerList.add(ch);
                 else {
                     handlerList = Collections.synchronizedList(new LinkedList<>());
                     handlerList.add(ch);
                     ch.server.userToHandler.put((int) handler.user.get("id"), handlerList);
                 }
 
+                // Notify this user's online followers that they are online
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT follower FROM Friends WHERE id = ?");
+                    PreparedStatement stmt = server.db
+                            .getPreparedStatement("SELECT follower FROM Friends WHERE id = ?");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.execute();
                     JSONObject[] r = Database.extractResultSet(stmt.getResultSet());
@@ -198,46 +112,46 @@ public class ClientHandler extends ConnectionHandler {
                     user_notif_data.remove("email");
 
                     for (JSONObject jsonObject : r) {
-                        //ClientHandler h = server.userToHandler.get((int) jsonObject.get("follower"));
                         List<ClientHandler> followerList = server.userToHandler.get((int) jsonObject.get("follower"));
 
-                        if (followerList != null) followerList.forEach((ClientHandler h) -> h.writePacket(
-                               Packet.createPacket(
-                                       Packet.TYPE_NOTIFICATION_USER_ONLINE,
-                                       true,
-                                       user_notif_data
-                               )
-                        ));
+                        if (followerList != null)
+                            followerList.forEach((ClientHandler h) -> h.writePacket(
+                                    Packet.createPacket(
+                                            Packet.TYPE_NOTIFICATION_USER_ONLINE,
+                                            true,
+                                            user_notif_data)));
                     }
-                }
-                catch (SQLException e) {
+                } catch (SQLException e) {
                     handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
                 }
 
+                // Get this user's keypair from the key manager
                 JSONObject keyPair;
                 try {
                     keyPair = KeyManager.getUserKey((int) handler.user.get("id"));
                 } catch (IOException e) {
                     handler.log("\033[91;3mIO Error: " + e.getClass().getName() + "\033[0m");
-                    return new Packet[] { Packet.createError("Key Retrieval Error", e.getClass().getName() + " occurred while trying to get the requested key.") };
+                    return new Packet[] { Packet.createError("Key Retrieval Error",
+                            e.getClass().getName() + " occurred while trying to get the requested key.") };
                 } catch (IllegalStateException e) {
                     keyPair = null;
                 }
 
+                // Prepare response data and reply to the client
                 JSONObject response = new JSONObject();
                 response.putAll(handler.user);
                 response.put("keyPair", keyPair);
 
-                return new Packet[] {Packet.createPacket(
+                return new Packet[] { Packet.createPacket(
                         Packet.TYPE_AUTHENTICATE,
                         true,
-                        response
-                )};
+                        response) };
             }
 
             @Override
             public Packet[] createNewUser(ConnectionHandler handler, Packet[] packets) {
-                return new Packet[] { Packet.createError("Feature Deprecation", "This feature is no longer available through PeopleCat, please refer to AuthCat.") };
+                return new Packet[] { Packet.createError("Feature Deprecation",
+                        "This feature is no longer available through PeopleCat, please refer to AuthCat.") };
             }
 
             @Override
@@ -247,8 +161,12 @@ public class ClientHandler extends ConnectionHandler {
 
             @Override
             public Packet[] getUser(ConnectionHandler handler, Packet[] packets) {
-                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get user request does not accept multi-packet arrays.")};
+                if (!handler.authenticated)
+                    return new Packet[] { Packet.createError("Not authenticated",
+                            "This request requires you to have an authenticated connection.") };
+                if (packets.length > 1)
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Get user request does not accept multi-packet arrays.") };
 
                 // Get the request data
                 JSONObject request = packets[0].getData();
@@ -272,59 +190,62 @@ public class ClientHandler extends ConnectionHandler {
 
                     // In case no users are returned
                     if (users.length == 0) {
-                        return new Packet[]{
+                        return new Packet[] {
                                 Packet.createPacket(Packet.TYPE_GET_USER, true, new JSONObject())
                         };
                     }
-                }
-                else {
+                } else {
                     return new Packet[] { Packet.createError("AuthCat error", (String) response.get("message")) };
                 }
 
                 // Create the response packet sequence
                 Packet[] reply = new Packet[users.length];
-                for (int i = 0; i < users.length-1; i++) {
+                for (int i = 0; i < users.length - 1; i++) {
                     users[i].remove("Password");
                     reply[i] = Packet.createPacket(
                             Packet.TYPE_GET_USER,
                             false,
-                            users[i]
-                    );
+                            users[i]);
                 }
 
-                users[users.length-1].remove("Password");
-                reply[reply.length-1] = Packet.createPacket(
+                users[users.length - 1].remove("Password");
+                reply[reply.length - 1] = Packet.createPacket(
                         Packet.TYPE_GET_USER,
                         true,
-                        users[users.length-1]
-                );
+                        users[users.length - 1]);
 
                 return reply;
             }
 
             @Override
             public Packet[] getMessageQueue(ConnectionHandler handler, Packet[] packets) {
-                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+                if (!handler.authenticated)
+                    return new Packet[] { Packet.createError("Not authenticated",
+                            "This request requires you to have an authenticated connection.") };
+                if (packets.length > 1)
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Get message queue request does not accept multi-packet arrays.") };
 
                 JSONObject request = packets[0].getData();
                 if (request.get("chatId") == null) {
-                    return new Packet[] {Packet.createError("Incorrect data provided", "You must provide the ChatID.")};
+                    return new Packet[] {
+                            Packet.createError("Incorrect data provided", "You must provide the ChatID.") };
                 }
 
                 int chatId = Math.toIntExact((long) request.get("chatId"));
                 Message[] messages;
                 try {
                     messages = MessageBox.openMessageBox(chatId);
-                }
-                catch (FileNotFoundException e) {
+                } catch (FileNotFoundException e) {
                     try {
                         MessageBox.updateMessageBox(chatId, new Message[0]);
                         messages = MessageBox.openMessageBox(chatId);
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
                     }
-                    catch (IOException ex) { throw new RuntimeException(ex); }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
-                catch (IOException e) { throw new RuntimeException(e); }
 
                 ArrayList<Packet> response = new ArrayList<>();
                 JSONObject preResponse = new JSONObject();
@@ -333,19 +254,17 @@ public class ClientHandler extends ConnectionHandler {
                 response.add(Packet.createPacket(
                         Packet.TYPE_GET_MESSAGE_QUEUE,
                         false,
-                        preResponse
-                ));
+                        preResponse));
 
                 for (JSONObject m : Arrays.stream(messages).map(MessageBox::messageToJSON).toList()) {
                     response.add(Packet.createPacket(
                             Packet.TYPE_GET_MESSAGE_QUEUE,
                             false,
-                            m
-                    ));
+                            m));
                 }
 
                 if (messages.length == 0) {
-                    return new Packet[] {Packet.createError("No messages", "There are no messages in this chat.")};
+                    return new Packet[] { Packet.createError("No messages", "There are no messages in this chat.") };
                 }
 
                 response.get(response.size() - 1).isFinal = true;
@@ -355,11 +274,16 @@ public class ClientHandler extends ConnectionHandler {
 
             @Override
             public Packet[] sendMessage(ConnectionHandler handler, Packet[] packets) {
-                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+                if (!handler.authenticated)
+                    return new Packet[] { Packet.createError("Not authenticated",
+                            "This request requires you to have an authenticated connection.") };
+                if (packets.length > 1)
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Get message queue request does not accept multi-packet arrays.") };
 
                 JSONObject request = packets[0].getData();
-                Message msg = new Message((int) handler.user.get("id"), Math.toIntExact((long) request.get("chatId")), (long) request.get("timeSent"), request.get("content"));
+                Message msg = new Message((int) handler.user.get("id"), Math.toIntExact((long) request.get("chatId")),
+                        (long) request.get("timeSent"), request.get("content"));
 
                 try {
                     Message[] messages = MessageBox.openMessageBox(msg.ChatID);
@@ -367,9 +291,9 @@ public class ClientHandler extends ConnectionHandler {
                     System.arraycopy(messages, 0, newMessages, 0, messages.length);
                     newMessages[messages.length] = msg;
                     MessageBox.updateMessageBox(msg.ChatID, newMessages);
-                }
-                catch (IOException e) {
-                    return new Packet[] {Packet.createError("Server error", "An error occurred when writing the message store to the disk.")};
+                } catch (IOException e) {
+                    return new Packet[] { Packet.createError("Server error",
+                            "An error occurred when writing the message store to the disk.") };
                 }
 
                 // Notify other users about this message
@@ -383,29 +307,32 @@ public class ClientHandler extends ConnectionHandler {
 
                 JSONObject[] members;
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT `user`, pfpPath, fullName, Chats.Name AS 'chatName' FROM ChatMemberships JOIN SSO.Users ON `user` = SSO.Users.id JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE ChatMemberships.`chatid` = ?");
+                    PreparedStatement stmt = server.db.getPreparedStatement(
+                            "SELECT `user`, pfpPath, fullName, Chats.Name AS 'chatName' FROM ChatMemberships JOIN SSO.Users ON `user` = SSO.Users.id JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE ChatMemberships.`chatid` = ?");
                     stmt.setInt(1, chatID);
                     stmt.execute();
 
                     members = Database.extractResultSet(stmt.getResultSet());
-                }
-                catch (SQLException e) {
-                    handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()));
+                } catch (SQLException e) {
+                    handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n"
+                            + Server.stringifyStackTrace(e.getStackTrace()));
                     return new Packet[] { Packet.createError("Database Error", e.getMessage()) };
                 }
 
                 for (JSONObject member : members) {
                     int userID = (int) member.get("user");
 
-                    // Removing this condition will allow multiple clients connected under the same user
+                    // Removing this condition will allow multiple clients connected under the same
+                    // user
                     // to receive messages from each other.
 
-                    //if (userID == (int) handler.user.get("id")) {
-                    //    continue;
-                    //}
+                    // if (userID == (int) handler.user.get("id")) {
+                    // continue;
+                    // }
 
                     List<ClientHandler> handlerList = ch.server.userToHandler.get(userID);
-                    if (handlerList != null) handlerList.forEach((ClientHandler h) -> h.writePacket(notifyPacket));
+                    if (handlerList != null)
+                        handlerList.forEach((ClientHandler h) -> h.writePacket(notifyPacket));
 
                     JSONObject content = new JSONObject();
                     content.put("content", msgJSON.get("content"));
@@ -415,18 +342,23 @@ public class ClientHandler extends ConnectionHandler {
                     server.sendPushNotification(userID, content);
                 }
 
-                return new Packet[] {Packet.createPing()};
+                return new Packet[] { Packet.createPing() };
             }
 
             @Override
             public Packet[] notificationMessage(ConnectionHandler handler, Packet[] packets) {
-                return new Packet[] {Packet.createError("Invalid packet type", "The server is not able to receive message notification packets.")};
+                return new Packet[] { Packet.createError("Invalid packet type",
+                        "The server is not able to receive message notification packets.") };
             }
 
             @Override
             public Packet[] joinChat(ConnectionHandler handler, Packet[] packets) {
-                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+                if (!handler.authenticated)
+                    return new Packet[] { Packet.createError("Not authenticated",
+                            "This request requires you to have an authenticated connection.") };
+                if (packets.length > 1)
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Get message queue request does not accept multi-packet arrays.") };
 
                 JSONObject request = packets[0].getData();
                 JSONObject chat;
@@ -434,35 +366,39 @@ public class ClientHandler extends ConnectionHandler {
                     JSONObject[] results;
                     PreparedStatement stmt = server.db.getPreparedStatement("SELECT * FROM Chats WHERE ChatID = ?");
                     stmt.setInt(1, (int) ((long) request.get("chatId")));
-                    stmt.execute(); results = Database.extractResultSet(stmt.getResultSet());
+                    stmt.execute();
+                    results = Database.extractResultSet(stmt.getResultSet());
 
                     if (results.length != 1) {
-                        return new Packet[] {Packet.createError("Database error", "Could not find the specified chat or multiple chats exist with this ID.")};
+                        return new Packet[] { Packet.createError("Database error",
+                                "Could not find the specified chat or multiple chats exist with this ID.") };
                     }
 
                     chat = results[0];
-                }
-                catch (Exception e) {
-                    return new Packet[] {Packet.createError("Server error", e.getMessage())};
+                } catch (Exception e) {
+                    return new Packet[] { Packet.createError("Server error", e.getMessage()) };
                 }
 
                 if ((boolean) chat.get("isPrivate")) {
-                    return new Packet[] {Packet.createError("Access Denied", "You do not have access to this chat!")};
+                    return new Packet[] { Packet.createError("Access Denied", "You do not have access to this chat!") };
                 }
 
                 int chatID = Math.toIntExact((long) request.get("chatId"));
 
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO ChatMemberships (`user`, `chatid`) VALUES (?, ?)");
+                    PreparedStatement stmt = server.db
+                            .getPreparedStatement("INSERT INTO ChatMemberships (`user`, `chatid`) VALUES (?, ?)");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.setInt(2, chatID);
                     stmt.executeUpdate();
                 } catch (SQLException e) {
-                    if (e.getClass().getName().contentEquals(SQLIntegrityConstraintViolationException.class.getName())) {
-                        return new Packet[] {Packet.createError("Already member", "You are already a member of this chat.")};
-                    }
-                    else {
-                        handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()));
+                    if (e.getClass().getName()
+                            .contentEquals(SQLIntegrityConstraintViolationException.class.getName())) {
+                        return new Packet[] {
+                                Packet.createError("Already member", "You are already a member of this chat.") };
+                    } else {
+                        handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n"
+                                + Server.stringifyStackTrace(e.getStackTrace()));
                         return new Packet[] { Packet.createError("SQL Error", e.getMessage()) };
                     }
                 }
@@ -473,17 +409,20 @@ public class ClientHandler extends ConnectionHandler {
                 chatJSON.put("keyId", chat.get("KeyID"));
                 chatJSON.put("icon", chat.get("Icon"));
 
-                return new Packet[] {Packet.createPacket(Packet.TYPE_JOIN_CHAT, true, chatJSON)};
+                return new Packet[] { Packet.createPacket(Packet.TYPE_JOIN_CHAT, true, chatJSON) };
             }
 
             @Override
             public Packet[] changeProfilePicture(ConnectionHandler handler, Packet[] packets) {
-                return new Packet[] { Packet.createError("Feature Deprecation", "This feature is no longer available through PeopleCat, please refer to AuthCat.") };
+                return new Packet[] { Packet.createError("Feature Deprecation",
+                        "This feature is no longer available through PeopleCat, please refer to AuthCat.") };
             }
 
             @Override
             public Packet[] getActiveUserCount(ConnectionHandler handler, Packet[] packets) {
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+                if (packets.length > 1)
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Get message queue request does not accept multi-packet arrays.") };
 
                 JSONObject d = new JSONObject();
                 d.put("usersOnline", server.handlers.size());
@@ -491,8 +430,7 @@ public class ClientHandler extends ConnectionHandler {
                 return new Packet[] { Packet.createPacket(
                         Packet.TYPE_GET_ACTIVE_USER_COUNT,
                         true,
-                        d
-                ) };
+                        d) };
             }
 
             @Override
@@ -507,12 +445,17 @@ public class ClientHandler extends ConnectionHandler {
 
             @Override
             public Packet[] getFriends(ConnectionHandler handler, Packet[] packets) {
-                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+                if (!handler.authenticated)
+                    return new Packet[] { Packet.createError("Not authenticated",
+                            "This request requires you to have an authenticated connection.") };
+                if (packets.length > 1)
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Get message queue request does not accept multi-packet arrays.") };
 
                 JSONObject[] results;
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT u.username, u.fullName, u.pfpPath FROM Friends LEFT JOIN SSO.Users as u ON Friends.id = u.id WHERE Friends.id = ?");
+                    PreparedStatement stmt = server.db.getPreparedStatement(
+                            "SELECT u.username, u.fullName, u.pfpPath FROM Friends LEFT JOIN SSO.Users as u ON Friends.id = u.id WHERE Friends.id = ?");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.execute();
 
@@ -529,8 +472,7 @@ public class ClientHandler extends ConnectionHandler {
                     response[i] = Packet.createPacket(
                             Packet.TYPE_GET_FRIENDS,
                             false,
-                            results[i]
-                    );
+                            results[i]);
                 }
 
                 response[response.length - 1].isFinal = true;
@@ -539,8 +481,12 @@ public class ClientHandler extends ConnectionHandler {
 
             @Override
             public Packet[] friendRequest(ConnectionHandler handler, Packet[] packets) {
-                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+                if (!handler.authenticated)
+                    return new Packet[] { Packet.createError("Not authenticated",
+                            "This request requires you to have an authenticated connection.") };
+                if (packets.length > 1)
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Get message queue request does not accept multi-packet arrays.") };
 
                 JSONObject data = packets[0].getData();
                 String action = (String) data.get("action");
@@ -548,17 +494,20 @@ public class ClientHandler extends ConnectionHandler {
 
                 if (action.contentEquals("SEND")) {
                     if (!data.containsKey("recipient")) {
-                        return new Packet[] { Packet.createError("Invalid request", "This action type must contain the recipient field.") };
+                        return new Packet[] { Packet.createError("Invalid request",
+                                "This action type must contain the recipient field.") };
                     }
 
                     try {
-                        PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO FriendRequests (sender, recipient) values (?, ?)");
+                        PreparedStatement stmt = server.db
+                                .getPreparedStatement("INSERT INTO FriendRequests (sender, recipient) values (?, ?)");
                         stmt.setInt(1, (int) handler.user.get("id"));
                         stmt.setInt(2, (int) data.get("recipient"));
                         stmt.executeUpdate();
                         stmt.close();
 
-                        stmt = server.db.getPreparedStatement("SELECT id FROM FriendRequests WHERE sender = ? AND recipient = ?");
+                        stmt = server.db.getPreparedStatement(
+                                "SELECT id FROM FriendRequests WHERE sender = ? AND recipient = ?");
                         stmt.setInt(1, (int) handler.user.get("id"));
                         stmt.setInt(2, (int) data.get("recipient"));
                         stmt.execute();
@@ -567,26 +516,25 @@ public class ClientHandler extends ConnectionHandler {
                         stmt.close();
 
                         response = new Packet[] { Packet.createPacket(Packet.TYPE_FRIEND_REQUEST, true, r[0]) };
-                    }
-                    catch (SQLException e) {
+                    } catch (SQLException e) {
                         handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
                         return new Packet[] { Packet.createError("Database error", e.getMessage()) };
                     }
-                }
-                else if (action.contentEquals("ACCEPT")) {
+                } else if (action.contentEquals("ACCEPT")) {
                     if (!data.containsKey("id")) {
-                        return new Packet[] { Packet.createError("Invalid request", "This action type must contain the id field.") };
+                        return new Packet[] {
+                                Packet.createError("Invalid request", "This action type must contain the id field.") };
                     }
 
                     try {
-                        PreparedStatement stmt = server.db.getPreparedStatement("SELECT sender FROM FriendRequests WHERE id = ?");
+                        PreparedStatement stmt = server.db
+                                .getPreparedStatement("SELECT sender FROM FriendRequests WHERE id = ?");
                         stmt.setInt(1, (int) data.get("id"));
                         stmt.execute();
                         int sender;
                         try {
                             sender = (int) Database.extractResultSet(stmt.getResultSet())[0].get("sender");
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             // Problem is likely that the request does not exist
                             stmt.close();
                             return new Packet[] { Packet.createError("Friend request does not exist", e.getMessage()) };
@@ -594,7 +542,8 @@ public class ClientHandler extends ConnectionHandler {
 
                         stmt.close();
 
-                        stmt = server.db.getPreparedStatement("INSERT INTO Friends (id, follower) values (?, ?), (?, ?)");
+                        stmt = server.db
+                                .getPreparedStatement("INSERT INTO Friends (id, follower) values (?, ?), (?, ?)");
                         stmt.setInt(1, (int) handler.user.get("id"));
                         stmt.setInt(2, sender);
                         stmt.setInt(3, sender);
@@ -606,35 +555,34 @@ public class ClientHandler extends ConnectionHandler {
                         stmt.setInt(1, (int) data.get("id"));
                         stmt.executeUpdate();
                         stmt.close();
-                    }
-                    catch (SQLException e) {
+                    } catch (SQLException e) {
                         handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
                         return new Packet[] { Packet.createError("Database error", e.getMessage()) };
                     }
 
                     response = new Packet[0];
-                }
-                else if (action.contentEquals("DECLINE")) {
+                } else if (action.contentEquals("DECLINE")) {
                     if (!data.containsKey("id")) {
-                        return new Packet[] { Packet.createError("Invalid request", "This action type must contain the id field.") };
+                        return new Packet[] {
+                                Packet.createError("Invalid request", "This action type must contain the id field.") };
                     }
 
                     try {
-                        PreparedStatement stmt = server.db.getPreparedStatement("DELETE FROM FriendRequests WHERE id = ?");
+                        PreparedStatement stmt = server.db
+                                .getPreparedStatement("DELETE FROM FriendRequests WHERE id = ?");
                         stmt.setInt(1, (int) data.get("id"));
                         stmt.executeUpdate();
                         stmt.close();
-                    }
-                    catch (SQLException e) {
+                    } catch (SQLException e) {
                         handler.log("\033[91;3mSQL error! " + e.getMessage());
                         return new Packet[] { Packet.createError("Database error", e.getMessage()) };
                     }
 
                     response = new Packet[0];
-                }
-                else if (action.contentEquals("GET")) {
+                } else if (action.contentEquals("GET")) {
                     try {
-                        PreparedStatement stmt = server.db.getPreparedStatement("SELECT id, sender FROM FriendRequests WHERE recipient = ?");
+                        PreparedStatement stmt = server.db
+                                .getPreparedStatement("SELECT id, sender FROM FriendRequests WHERE recipient = ?");
                         stmt.setInt(1, (int) handler.user.get("id"));
                         stmt.execute();
                         JSONObject[] r = Database.extractResultSet(stmt.getResultSet());
@@ -644,19 +592,17 @@ public class ClientHandler extends ConnectionHandler {
                             response[i] = Packet.createPacket(
                                     Packet.TYPE_FRIEND_REQUEST,
                                     false,
-                                    r[i]
-                            );
+                                    r[i]);
                         }
 
                         response[response.length - 1].isFinal = true;
-                    }
-                    catch (SQLException e) {
+                    } catch (SQLException e) {
                         handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
                         return new Packet[] { Packet.createError("Database error", e.getMessage()) };
                     }
-                }
-                else {
-                    response = new Packet[] { Packet.createError("Unrecognised friend request action", "The action \"" + action + "\" is not recognised.") };
+                } else {
+                    response = new Packet[] { Packet.createError("Unrecognised friend request action",
+                            "The action \"" + action + "\" is not recognised.") };
                 }
 
                 return response;
@@ -676,33 +622,38 @@ public class ClientHandler extends ConnectionHandler {
                 return new Packet[] { Packet.createPacket(
                         Packet.TYPE_GET_SERVER_INFO,
                         true,
-                        d
-                )};
+                        d) };
             }
 
             @Override
             public Packet[] getChatMemberships(ConnectionHandler handler, Packet[] packets) {
-                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+                if (!handler.authenticated)
+                    return new Packet[] { Packet.createError("Not authenticated",
+                            "This request requires you to have an authenticated connection.") };
+                if (packets.length > 1)
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Get message queue request does not accept multi-packet arrays.") };
 
                 Packet[] stream;
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT Chats.ChatID AS `chatId`, Name AS `name`, Icon AS `icon`, isPrivate FROM ChatMemberships INNER JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE `user` = ?");
+                    PreparedStatement stmt = server.db.getPreparedStatement(
+                            "SELECT Chats.ChatID AS `chatId`, Name AS `name`, Icon AS `icon`, isPrivate FROM ChatMemberships INNER JOIN Chats ON ChatMemberships.`chatid` = Chats.ChatID WHERE `user` = ?");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.execute();
                     JSONObject[] results = Database.extractResultSet(stmt.getResultSet());
 
                     if (results.length == 0) {
-                        return new Packet[] { Packet.createError("No Chat Memberships", "This user is not a member of any chats.") };
+                        return new Packet[] {
+                                Packet.createError("No Chat Memberships", "This user is not a member of any chats.") };
                     }
 
                     JSONParser parser = new JSONParser();
 
                     for (int i = 0; i < results.length; i++) {
                         try {
-                            results[i].put("key", KeyManager.getChatKey((int) handler.user.get("id"), (int) results[i].get("chatId")));
-                        }
-                        catch (IOException | IllegalStateException e) {
+                            results[i].put("key", KeyManager.getChatKey((int) handler.user.get("id"),
+                                    (int) results[i].get("chatId")));
+                        } catch (IOException | IllegalStateException e) {
                             results[i].put("key", null);
                         }
                     }
@@ -712,12 +663,11 @@ public class ClientHandler extends ConnectionHandler {
                         stream[i] = Packet.createPacket(
                                 Packet.TYPE_GET_CHAT_MEMBERSHIPS,
                                 false,
-                                results[i]
-                        );
+                                results[i]);
                     }
-                }
-                catch (SQLException e) {
-                    handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()));
+                } catch (SQLException e) {
+                    handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n"
+                            + Server.stringifyStackTrace(e.getStackTrace()));
                     return new Packet[] { Packet.createError("Database Error", e.getMessage()) };
                 }
 
@@ -727,14 +677,17 @@ public class ClientHandler extends ConnectionHandler {
 
             @Override
             public Packet[] createChat(ConnectionHandler handler, Packet[] packets) {
-                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+                if (!handler.authenticated)
+                    return new Packet[] { Packet.createError("Not authenticated",
+                            "This request requires you to have an authenticated connection.") };
+                if (packets.length > 1)
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Get message queue request does not accept multi-packet arrays.") };
 
                 JSONObject request = packets[0].getData();
                 if (!request.containsKey("name")) {
                     return new Packet[] { Packet.createError("Invalid Format", "You must specify the name field!") };
-                }
-                else if (request.get("name").equals("")) {
+                } else if (request.get("name").equals("")) {
                     return new Packet[] { Packet.createError("Invalid Format", "The name field cannot be empty!") };
                 }
 
@@ -744,49 +697,61 @@ public class ClientHandler extends ConnectionHandler {
                 JSONObject chat;
 
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO Chats (Name" + (key == null ? "" : ", isPrivate") + (icon == null ? "" : ", Icon") + ") VALUES (?" + (key == null ? "" : ", 1") + (icon == null ? "" : ", ?") + ")");
+                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO Chats (Name"
+                            + (key == null ? "" : ", isPrivate") + (icon == null ? "" : ", Icon") + ") VALUES (?"
+                            + (key == null ? "" : ", 1") + (icon == null ? "" : ", ?") + ")");
                     stmt.setString(1, name);
-                    if (icon != null) stmt.setString(2, icon);
+                    if (icon != null)
+                        stmt.setString(2, icon);
                     stmt.executeUpdate();
 
-                    stmt = server.db.getPreparedStatement("SELECT ChatID AS `chatId`, Name AS `name`, Icon AS `icon`, isPrivate FROM Chats WHERE ChatID = LAST_INSERT_ID()");
+                    stmt = server.db.getPreparedStatement(
+                            "SELECT ChatID AS `chatId`, Name AS `name`, Icon AS `icon`, isPrivate FROM Chats WHERE ChatID = LAST_INSERT_ID()");
                     stmt.execute();
                     chat = Database.extractResultSet(stmt.getResultSet())[0];
 
-                    stmt = server.db.getPreparedStatement("INSERT INTO ChatMemberships (`user`, `chatid`) VALUES (?, ?)");
+                    stmt = server.db
+                            .getPreparedStatement("INSERT INTO ChatMemberships (`user`, `chatid`) VALUES (?, ?)");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.setInt(2, (int) chat.get("chatId"));
                     stmt.executeUpdate();
 
-                    if (key != null) KeyManager.addChatKey((int) handler.user.get("id"), (int) chat.get("chatId"), key);
-                }
-                catch (SQLException e) {
-                    handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
+                    if (key != null)
+                        KeyManager.addChatKey((int) handler.user.get("id"), (int) chat.get("chatId"), key);
+                } catch (SQLException e) {
+                    handler.log("\033[91m;3mSQL Error! " + e.getClass().getName() + " " + e.getMessage() + "\n"
+                            + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
                     return new Packet[] { Packet.createError("Database Error", e.getMessage()) };
                 } catch (IOException | IllegalStateException e) {
-                    handler.log("\033[91m;3mKey Submission Error! " + e.getClass().getName() + " " + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
-                    return new Packet[] { Packet.createError("Key Submission Error", "Failed to submit private key: " + e.getMessage()) };
+                    handler.log("\033[91m;3mKey Submission Error! " + e.getClass().getName() + " " + e.getMessage()
+                            + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
+                    return new Packet[] { Packet.createError("Key Submission Error",
+                            "Failed to submit private key: " + e.getMessage()) };
                 }
 
                 return new Packet[] {
                         Packet.createPacket(
                                 Packet.TYPE_CREATE_CHAT,
                                 true,
-                                chat
-                        )
+                                chat)
                 };
             }
 
             @Override
             public Packet[] initUserKey(ConnectionHandler handler, Packet[] packets) {
-                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+                if (!handler.authenticated)
+                    return new Packet[] { Packet.createError("Not authenticated",
+                            "This request requires you to have an authenticated connection.") };
+                if (packets.length > 1)
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Get message queue request does not accept multi-packet arrays.") };
 
                 // Verify the request format is correct
                 JSONObject request = packets[0].getData();
 
                 if (!request.containsKey("newPublicKey") || !request.containsKey("newPrivateKey")) {
-                    return new Packet[] { Packet.createError("Invalid Format", "There are missing required fields from the payload!") };
+                    return new Packet[] { Packet.createError("Invalid Format",
+                            "There are missing required fields from the payload!") };
                 }
 
                 //
@@ -794,7 +759,8 @@ public class ClientHandler extends ConnectionHandler {
                 //
 
                 try {
-                    KeyManager.initUserKey((int) handler.user.get("id"), (JSONObject) request.get("newPublicKey"), (String) request.get("newPrivateKey"));
+                    KeyManager.initUserKey((int) handler.user.get("id"), (JSONObject) request.get("newPublicKey"),
+                            (String) request.get("newPrivateKey"));
 
                 } catch (IOException e) {
                     handler.log("\033[91m;3mKey Init Error (Phase 1): " + e.getMessage() + "\033[0m");
@@ -806,7 +772,8 @@ public class ClientHandler extends ConnectionHandler {
                 //
 
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("DELETE FROM ChatMemberships WHERE user = ?");
+                    PreparedStatement stmt = server.db
+                            .getPreparedStatement("DELETE FROM ChatMemberships WHERE user = ?");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.executeUpdate();
                     stmt.close();
@@ -821,68 +788,86 @@ public class ClientHandler extends ConnectionHandler {
 
             @Override
             public Packet[] getUserKey(ConnectionHandler handler, Packet[] packets) {
-                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+                if (!handler.authenticated)
+                    return new Packet[] { Packet.createError("Not authenticated",
+                            "This request requires you to have an authenticated connection.") };
+                if (packets.length > 1)
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Get message queue request does not accept multi-packet arrays.") };
 
                 // Check the request contains the required field
                 JSONObject request = packets[0].getData();
                 if (!request.containsKey("id")) {
-                    return new Packet[] { Packet.createError("Invalid Format", "You must specify the id of the user!") };
+                    return new Packet[] {
+                            Packet.createError("Invalid Format", "You must specify the id of the user!") };
                 }
 
                 // Get the field from the request data, and attempt to retrieve the user's key.
-                int id = request.get("id").getClass() == Long.class ? Math.toIntExact((long) request.get("id")) : (int) request.get("id");
+                int id = request.get("id").getClass() == Long.class ? Math.toIntExact((long) request.get("id"))
+                        : (int) request.get("id");
                 JSONObject key;
                 try {
                     key = KeyManager.getUserKey(id);
                 } catch (IOException e) {
                     handler.log("\033[91;3mIO Error: " + e.getClass().getName() + "\033[0m");
-                    return new Packet[] { Packet.createError("Key Retrieval Error", e.getClass().getName() + " occurred while trying to get the requested key.") };
+                    return new Packet[] { Packet.createError("Key Retrieval Error",
+                            e.getClass().getName() + " occurred while trying to get the requested key.") };
                 } catch (IllegalStateException e) {
-                    return new Packet[] { Packet.createError("Key Not Found", "The user has a key set, but the key set does not contain a user key! Try re-initialising the user's key.") };
+                    return new Packet[] { Packet.createError("Key Not Found",
+                            "The user has a key set, but the key set does not contain a user key! Try re-initialising the user's key.") };
                 }
 
                 if (key == null) {
-                    return new Packet[] { Packet.createError("Key Set Not Found", "No key set can be found for the specified user.") };
+                    return new Packet[] { Packet.createError("Key Set Not Found",
+                            "No key set can be found for the specified user.") };
                 }
 
                 return new Packet[] {
                         Packet.createPacket(
                                 Packet.TYPE_GET_USER_KEY,
                                 true,
-                                (JSONObject) key.get("publicKey")
-                        )
+                                (JSONObject) key.get("publicKey"))
                 };
             }
 
             @Override
             public Packet[] addToChat(ConnectionHandler handler, Packet[] packets) {
-                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+                if (!handler.authenticated)
+                    return new Packet[] { Packet.createError("Not authenticated",
+                            "This request requires you to have an authenticated connection.") };
+                if (packets.length > 1)
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Get message queue request does not accept multi-packet arrays.") };
 
                 JSONObject request = packets[0].getData();
 
                 if (!request.containsKey("id") || !request.containsKey("chatId")) {
-                    return new Packet[] { Packet.createError("Invalid Format", "Request is missing some required fields!") };
+                    return new Packet[] {
+                            Packet.createError("Invalid Format", "Request is missing some required fields!") };
                 }
 
-                request.put("id", request.get("id").getClass() == Long.class ? Math.toIntExact((long) request.get("id")) : request.get("id"));
-                request.put("chatId", request.get("chatId").getClass() == Long.class ? Math.toIntExact((long) request.get("chatId")) : request.get("chatId"));
+                request.put("id", request.get("id").getClass() == Long.class ? Math.toIntExact((long) request.get("id"))
+                        : request.get("id"));
+                request.put("chatId",
+                        request.get("chatId").getClass() == Long.class ? Math.toIntExact((long) request.get("chatId"))
+                                : request.get("chatId"));
 
                 // Verify that this user and the target user are friends
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("SELECT * FROM Friends WHERE id = ? AND follower = ?");
+                    PreparedStatement stmt = server.db
+                            .getPreparedStatement("SELECT * FROM Friends WHERE id = ? AND follower = ?");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.setInt(2, (int) request.get("id"));
                     stmt.execute();
 
                     JSONObject[] results = Database.extractResultSet(stmt.getResultSet());
                     if (results.length == 0) {
-                        return new Packet[] { Packet.createError("Request Rejected", "You are not friends with the target user.") };
+                        return new Packet[] {
+                                Packet.createError("Request Rejected", "You are not friends with the target user.") };
                     }
-                }
-                catch (SQLException e) {
-                    return new Packet[] { Packet.createError("Friend Verification Failed", "Failed to verify whether or not you and the target user are friends: " + e.getMessage()) };
+                } catch (SQLException e) {
+                    return new Packet[] { Packet.createError("Friend Verification Failed",
+                            "Failed to verify whether or not you and the target user are friends: " + e.getMessage()) };
                 }
 
                 // Verify that this user is a member of the chat, and has its key
@@ -891,56 +876,67 @@ public class ClientHandler extends ConnectionHandler {
                         throw new IllegalStateException();
                     }
                 } catch (IOException | IllegalStateException e) {
-                    return new Packet[] { Packet.createError("Access Denied", " You do not have access to this chat sufficient to perform this action.") };
+                    return new Packet[] { Packet.createError("Access Denied",
+                            " You do not have access to this chat sufficient to perform this action.") };
                 }
 
                 // Add the chat membership and key to the other user's records
                 try {
-                    KeyManager.addChatKey((int) request.get("id"), (int) request.get("chatId"), (String) request.get("key"));
-                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO ChatMemberships (`user`, `chatId`) VALUES (?, ?)");
+                    KeyManager.addChatKey((int) request.get("id"), (int) request.get("chatId"),
+                            (String) request.get("key"));
+                    PreparedStatement stmt = server.db
+                            .getPreparedStatement("INSERT INTO ChatMemberships (`user`, `chatId`) VALUES (?, ?)");
                     stmt.setInt(1, (int) request.get("id"));
                     stmt.setInt(2, (int) request.get("chatId"));
                     stmt.executeUpdate();
 
                 } catch (SQLException e) {
-                    return new Packet[] { Packet.createError("DB Error", "Failed to add the membership record to the database: " + e.getMessage()) };
+                    return new Packet[] { Packet.createError("DB Error",
+                            "Failed to add the membership record to the database: " + e.getMessage()) };
                 } catch (IOException | IllegalStateException e) {
-                    return new Packet[] { Packet.createError("Key Submission Error", "Failed to add the key to the target user's key set: " + e.getMessage()) };
+                    return new Packet[] { Packet.createError("Key Submission Error",
+                            "Failed to add the key to the target user's key set: " + e.getMessage()) };
                 }
 
                 return new Packet[] { Packet.createPacket(
                         Packet.TYPE_ADD_TO_CHAT,
                         true,
-                        null
-                )};
+                        null) };
             }
 
             @Override
             public Packet[] pushSubscribe(ConnectionHandler handler, Packet[] packets) {
-                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+                if (!handler.authenticated)
+                    return new Packet[] { Packet.createError("Not authenticated",
+                            "This request requires you to have an authenticated connection.") };
+                if (packets.length > 1)
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Get message queue request does not accept multi-packet arrays.") };
 
                 JSONObject request = packets[0].getData();
                 if (!request.containsKey("endpoint") || !request.containsKey("auth") || !request.containsKey("key")) {
-                    return new Packet[] { Packet.createError("Invalid Format", "You are missing some required fields!") };
+                    return new Packet[] {
+                            Packet.createError("Invalid Format", "You are missing some required fields!") };
                 }
 
                 int id;
 
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("INSERT INTO PushSubscriptions (`user`, endpoint, `key`, auth) VALUES (?, ?, ?, ?)");
+                    PreparedStatement stmt = server.db.getPreparedStatement(
+                            "INSERT INTO PushSubscriptions (`user`, endpoint, `key`, auth) VALUES (?, ?, ?, ?)");
                     stmt.setInt(1, (int) handler.user.get("id"));
                     stmt.setString(2, (String) request.get("endpoint"));
                     stmt.setString(3, (String) request.get("key"));
                     stmt.setString(4, (String) request.get("auth"));
                     stmt.executeUpdate();
                     ResultSet rs = stmt.getGeneratedKeys();
-                    rs.next(); id = rs.getInt(1);
+                    rs.next();
+                    id = rs.getInt(1);
 
                 } catch (SQLException e) {
-                    return new Packet[] { Packet.createError("DB Error", "Failed to add the subscription record to the database: " + e.getMessage()) };
+                    return new Packet[] { Packet.createError("DB Error",
+                            "Failed to add the subscription record to the database: " + e.getMessage()) };
                 }
-
 
                 JSONObject r = new JSONObject();
                 r.put("id", id);
@@ -949,15 +945,18 @@ public class ClientHandler extends ConnectionHandler {
                         Packet.createPacket(
                                 Packet.TYPE_PUSH_SUBSCRIBE,
                                 true,
-                                r
-                        )
+                                r)
                 };
             }
 
             @Override
             public Packet[] pushUnsubscribe(ConnectionHandler handler, Packet[] packets) {
-                if (!handler.authenticated) return new Packet[] {Packet.createError("Not authenticated", "This request requires you to have an authenticated connection.")};
-                if (packets.length > 1) return new Packet[] {Packet.createError("Invalid data type", "Get message queue request does not accept multi-packet arrays.")};
+                if (!handler.authenticated)
+                    return new Packet[] { Packet.createError("Not authenticated",
+                            "This request requires you to have an authenticated connection.") };
+                if (packets.length > 1)
+                    return new Packet[] { Packet.createError("Invalid data type",
+                            "Get message queue request does not accept multi-packet arrays.") };
 
                 JSONObject request = packets[0].getData();
                 if (!request.containsKey("id")) {
@@ -965,13 +964,14 @@ public class ClientHandler extends ConnectionHandler {
                 }
 
                 try {
-                    PreparedStatement stmt = server.db.getPreparedStatement("DELETE FROM PushSubscriptions WHERE id = ? AND `user` = ?");
+                    PreparedStatement stmt = server.db
+                            .getPreparedStatement("DELETE FROM PushSubscriptions WHERE id = ? AND `user` = ?");
                     stmt.setInt(1, Math.toIntExact((long) request.get("id")));
                     stmt.setInt(2, (int) handler.user.get("id"));
                     stmt.executeUpdate();
-                }
-                catch (SQLException e) {
-                    return new Packet[] { Packet.createError("DB Error", "Failed to remove the subscription record to the database: " + e.getMessage()) };
+                } catch (SQLException e) {
+                    return new Packet[] { Packet.createError("DB Error",
+                            "Failed to remove the subscription record to the database: " + e.getMessage()) };
                 }
 
                 return new Packet[] { Packet.createPacket(Packet.TYPE_PUSH_UNSUBSCRIBE, true, null) };
@@ -985,7 +985,7 @@ public class ClientHandler extends ConnectionHandler {
         this.active = true;
 
         // No longer required with the new websocket library
-        //this.setup();
+        // this.setup();
 
         try {
             while (true) {
@@ -1010,21 +1010,25 @@ public class ClientHandler extends ConnectionHandler {
 
                 packets.add(p);
 
-
                 Packet[] packetSequence = packets.toArray(new Packet[0]);
 
                 // Use a response handler to determine the response from the packet sequence
                 Packet[] responseSequence = packetHandler.handle(this, packetSequence);
-                if (responseSequence == null) continue;
+                if (responseSequence == null)
+                    continue;
 
                 // Send the response sequence to the client through the output stream
                 for (Packet packet : responseSequence) {
-                    if (packet.type != Packet.TYPE_PING) log("Writing packet: \n" + packet + " -> " + packet.getData().toJSONString());
-                    else log("Pinging client.");
+                    if (packet.type != Packet.TYPE_PING)
+                        log("Writing packet: \n" + packet + " -> " + packet.getData().toJSONString());
+                    else
+                        log("Pinging client.");
                     writePacket(packet);
                 }
             }
-        } catch (Exception e) { log("\033[91;3m" + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m"); }
+        } catch (Exception e) {
+            log("\033[91;3m" + e.getMessage() + "\n" + Server.stringifyStackTrace(e.getStackTrace()) + "\033[0m");
+        }
 
         log("Closing thread.");
         close();
@@ -1040,8 +1044,10 @@ public class ClientHandler extends ConnectionHandler {
             List<ClientHandler> handlerList = server.userToHandler.get((int) user.get("id"));
 
             for (int i = 0; i < handlerList.size(); i++) {
-                // Presumably this comparison should determine if the handlers in question are the same handlers.
-                // I'm not sure why simply comparing the references doesn't work, but I will give this a go and
+                // Presumably this comparison should determine if the handlers in question are
+                // the same handlers.
+                // I'm not sure why simply comparing the references doesn't work, but I will
+                // give this a go and
                 // see if it works.
                 // Apparantly it does indeed work now !
                 if (handlerList.get(i).threadId() == this.threadId()) {
@@ -1066,15 +1072,12 @@ public class ClientHandler extends ConnectionHandler {
 
                     if (followerList != null)
                         followerList.forEach((ClientHandler h) -> h.writePacket(
-                            Packet.createPacket(
-                                    Packet.TYPE_NOTIFICATION_USER_OFFLINE,
-                                    true,
-                                    user_notif_data
-                            )
-                        ));
+                                Packet.createPacket(
+                                        Packet.TYPE_NOTIFICATION_USER_OFFLINE,
+                                        true,
+                                        user_notif_data)));
                 }
-            }
-            catch (SQLException e) {
+            } catch (SQLException e) {
                 log("\033[91;3mSQL error! " + e.getMessage());
             }
         }
