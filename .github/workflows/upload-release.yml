@@ -17,4 +17,4 @@ jobs:
     - name: Upload to release
       uses: "softprops/action-gh-release@v0.1.15"
       with:
-        files: build/distributions/app.*
+        files: app/build/distributions/app.*
