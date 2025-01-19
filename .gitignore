@@ -6,3 +6,5 @@ build
 
 app/Assets
 .vscode
+
+log.txt

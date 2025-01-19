@@ -10,8 +10,11 @@ import org.jose4j.lang.JoseException;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -29,11 +32,13 @@ public class Server {
         public int port;
         public int threadCount;
         public boolean useSSL;
+        public String logFile;
 
-        public Options(int port, int threadCount, boolean useSSL) {
+        public Options(int port, int threadCount, boolean useSSL, String logFile) {
             this.port = port;
             this.threadCount = threadCount;
             this.useSSL = useSSL;
+            this.logFile = logFile;
         }
     }
 
@@ -82,6 +87,7 @@ public class Server {
     public int port;
     public int threadCount;
     public boolean useSSL;
+    public String logFile;
     public PushAsyncService pushService;
     public PublicKey pushServicePublicKey;
     public Database db;
@@ -98,7 +104,10 @@ public class Server {
         for (Field field : Options.class.getFields()) {
             Server.class.getField(field.getName()).set(this, field.get(options));
         }
-
+        
+        System.setOut(getLogStream());
+        System.setErr(getLogStream());
+        
         db = new Database();
     }
 
@@ -106,6 +115,7 @@ public class Server {
         int port = 1234;
         int threadCount = 10;
         boolean useSSL = true;
+        String logFile = "log.txt";
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
@@ -123,17 +133,30 @@ public class Server {
                     useSSL = false;
                 }
 
+                case "--log-file" -> {
+                    i++;
+                    logFile = args[i];
+                }
+
                 default -> throw new RuntimeException("Invalid option " + args[i]);
             }
         }
 
-        return new Options(port, threadCount, useSSL);
+        return new Options(port, threadCount, useSSL, logFile);
     }
 
     public static void main(String[] args) throws NoSuchFieldException, IllegalAccessException, SQLException, IOException, ParseException {
         // Create the server instance from the options
         Server server = new Server(getOptions(args));
         server.start();
+    }
+
+    public PrintStream getLogStream() {
+        try {
+            return new PrintStream(new FileOutputStream(logFile));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
