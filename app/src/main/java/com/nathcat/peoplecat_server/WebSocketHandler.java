@@ -1,6 +1,8 @@
 package com.nathcat.peoplecat_server;
 
 import com.mysql.cj.xdevapi.Client;
+import com.nathcat.peoplecat_server.ssl.SSLProviderFactory;
+
 import nl.altindag.ssl.SSLFactory;
 import nl.altindag.ssl.pem.util.PemUtils;
 import org.java_websocket.WebSocket;
@@ -16,6 +18,7 @@ import javax.net.ssl.*;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.*;
@@ -49,12 +52,14 @@ public class WebSocketHandler extends WebSocketServer {
 
             assert sslConfig != null;
 
-            KeyStore keyStore = KeyStore.getInstance("JKS");
-            keyStore.load(new FileInputStream("Assets/SSL/nathcat.net.keystore"), "changeit".toCharArray());
-            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            keyManagerFactory.init(keyStore, "changeit".toCharArray());
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(keyManagerFactory.getKeyManagers(), null, new SecureRandom());
+            SSLContext sslContext;
+            try {
+                sslContext = SSLProviderFactory.getProvider((String) sslConfig.get("ssl-provider"), sslConfig).getContext();
+            } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+                    | InvocationTargetException | NoSuchMethodException | SecurityException
+                    | ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
 
             // Start the server with the given SSL parameters
             webSocketHandler.setWebSocketFactory(new DefaultSSLWebSocketServerFactory(sslContext));
