@@ -34,8 +34,8 @@ public class KeyManager {
             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
     };
     private static final String KEY_FILE_PATH = "Assets/Data/Keys.json";
-    public static final String VAPID_PUBLIC_KEY_PATH = "Assets/vapid_public.pem";
-    public static final String VAPID_PRIVATE_KEY_PATH = "Assets/vapid_private.pem";
+    public static final String VAPID_PUBLIC_KEY_PATH = "Assets/SSL/vapid_public.pem";
+    public static final String VAPID_PRIVATE_KEY_PATH = "Assets/SSL/vapid_private.pem";
 
     /**
      * Get the key file, if it does not exist, initialise the key file with an empty JSON set.

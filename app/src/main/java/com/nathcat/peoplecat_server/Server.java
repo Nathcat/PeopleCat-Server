@@ -82,7 +82,7 @@ public class Server {
         }
     }
 
-    public static final String version = "5.1.1";
+    public static final String version = "5.2.0";
 
     public int port;
     public int threadCount;
@@ -109,6 +109,13 @@ public class Server {
         System.setErr(getLogStream());
         
         db = new Database();
+
+        Security.addProvider(new BouncyCastleProvider());
+
+        pushService = new PushAsyncService();
+        pushServicePublicKey = KeyManager.readPublicECPEM(KeyManager.VAPID_PUBLIC_KEY_PATH);
+        pushService.setPublicKey(pushServicePublicKey);
+        pushService.setPrivateKey(KeyManager.readPrivateECPEM(KeyManager.VAPID_PRIVATE_KEY_PATH));
     }
 
     public static Options getOptions(String[] args) {
@@ -175,13 +182,6 @@ public class Server {
         // This is a small worker thread which cleans the handler array by removing inactive handlers.
         Thread cleanerThread = new HandlerCleanerThread();
         cleanerThread.start();
-
-        Security.addProvider(new BouncyCastleProvider());
-
-        pushService = new PushAsyncService();
-        pushServicePublicKey = KeyManager.readPublicECPEM(KeyManager.VAPID_PUBLIC_KEY_PATH);
-        pushService.setPublicKey(pushServicePublicKey);
-        pushService.setPrivateKey(KeyManager.readPrivateECPEM(KeyManager.VAPID_PRIVATE_KEY_PATH));
 
         ServerSocket ss = new ServerSocket(port);
 
