@@ -82,7 +82,11 @@ public class ClientHandler extends ConnectionHandler {
                     return new Packet[] { Packet.createError("Auth Failed", "Failed to authenticate with the given information.") };
                 }
 
-                // Authentication successful, set relevant handler fields
+                // Authentication successful
+                // Check if the handler was previously authenticated, if so clean up!
+                deAuthenticate();
+
+                // Set relevant handler fields
                 handler.authenticated = true;
                 handler.user = authCatResponse.user;
                 handler.user.put("id", Math.toIntExact((long) handler.user.get("id")));
@@ -1036,10 +1040,7 @@ public class ClientHandler extends ConnectionHandler {
         interrupt();
     }
 
-    @Override
-    public void close() {
-        super.close();
-
+    public void deAuthenticate() {
         if (authenticated) {
             List<ClientHandler> handlerList = server.userToHandler.get((int) user.get("id"));
 
@@ -1081,5 +1082,12 @@ public class ClientHandler extends ConnectionHandler {
                 log("\033[91;3mSQL error! " + e.getMessage());
             }
         }
+    }
+
+    @Override
+    public void close() {
+        super.close();
+
+        deAuthenticate();
     }
 }
