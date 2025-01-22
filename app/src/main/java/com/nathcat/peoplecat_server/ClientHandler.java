@@ -183,7 +183,7 @@ public class ClientHandler extends ConnectionHandler {
                     throw new RuntimeException(e);
                 }
 
-                if (((String) response.get("state")).contentEquals("success")) {
+                if (((String) response.get("status")).contentEquals("success")) {
                     ArrayList<JSONObject> u = new ArrayList<>();
                     JSONObject results = (JSONObject) response.get("results");
                     for (Object k : results.keySet()) {
