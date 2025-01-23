@@ -160,6 +160,7 @@ public class ClientHandler extends ConnectionHandler {
 
             @Override
             public Packet[] close(ConnectionHandler handler, Packet[] packets) {
+                handler.close();
                 return null;
             }
 

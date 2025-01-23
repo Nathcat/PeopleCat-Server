@@ -82,7 +82,7 @@ public class Server {
         }
     }
 
-    public static final String version = "5.2.1";
+    public static final String version = "5.2.2";
 
     public int port;
     public int threadCount;
