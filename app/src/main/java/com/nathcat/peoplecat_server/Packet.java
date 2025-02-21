@@ -265,7 +265,15 @@ public class Packet {
      *     {
      *         "title": String,         // Not included since 4.2.0
      *         "message": String,       // Not included since 4.2.0
-     *         "chatId": Int,           // Pre 4.2.0 this is named ChatID
+     *         "chatId": Int,           // Pre 4.2.0 this is named ChatID, not present from 5.2.3
+     *         "chat": {                // Present from 5.2.3
+     *              "chatId": Integer,
+     *              "name": String,
+     *              "keyId": Integer,
+     *              "joinCode": String,
+     *              "icon": String,
+     *              "key": Hex string containing a JSON Web Key encrypted with the user key
+     *         }
      *         // "Message" field only included since server v4.1.3
      *         "message": {             // Pre 4.2.0 this is named Message
      *              "chatId": Int,      // Pre 4.2.0 this is named ChatID

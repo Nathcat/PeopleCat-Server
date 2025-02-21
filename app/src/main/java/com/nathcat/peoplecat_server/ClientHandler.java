@@ -301,10 +301,33 @@ public class ClientHandler extends ConnectionHandler {
                             "An error occurred when writing the message store to the disk.") };
                 }
 
-                // Notify other users about this message
                 int chatID = Math.toIntExact((long) request.get("chatId"));
+                JSONObject chat;
+
+                try {
+                    PreparedStatement stmt = server.db.getPreparedStatement(
+                            "SELECT ChatID AS `chatId`, Name AS `name`, Icon AS `icon`, isPrivate FROM Chats WHERE ChatID = ?");
+                    stmt.setInt(1, chatID);
+                    stmt.execute();
+
+                    JSONObject[] results = Database.extractResultSet(stmt.getResultSet());
+                    try {
+                        results[0].put("key", KeyManager.getChatKey((int) handler.user.get("id"),
+                                chatID));
+                    } catch (IOException | IllegalStateException e) {
+                        results[0].put("key", null);
+                    }
+                    
+                    chat = results[0];
+                }
+                catch (SQLException  | IndexOutOfBoundsException e) {
+                    return new Packet[] { Packet.createError("Server error",
+                            "An error occurred when getting chat information.") };
+                }
+
+                // Notify other users about this message
                 JSONObject notification = new JSONObject();
-                notification.put("chatId", chatID);
+                notification.put("chat", chat);
                 JSONObject msgJSON = MessageBox.messageToJSON(msg);
                 notification.put("message", msgJSON);
                 Packet notifyPacket = Packet.createPacket(Packet.TYPE_NOTIFICATION_MESSAGE, true, notification);
