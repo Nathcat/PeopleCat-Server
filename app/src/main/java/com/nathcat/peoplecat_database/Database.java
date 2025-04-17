@@ -61,6 +61,8 @@ public class Database {
             sb.append(fileIn.nextLine());
         }
 
+        fileIn.close();
+
         return (JSONObject) (new JSONParser().parse(sb.toString()));
     }
 

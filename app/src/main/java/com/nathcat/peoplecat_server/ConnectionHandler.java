@@ -8,30 +8,58 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
+import com.nathcat.peoplecat_server.handlers.IPacketHandler;
+import com.nathcat.peoplecat_server.handlers.PacketRouter;
+
 public class ConnectionHandler extends Thread {
+    /**
+     * The connected TCP client
+     */
     private Socket client;
+    /**
+     * The connected WebSocket client
+     */
     private WebSocket webClient;
+    /**
+     * The output byte stream to the client
+     */
     public OutputStream outStream;
+    /**
+     * The input byte stream from the client
+     */
     public InputStream inStream;
-    public IPacketHandler packetHandler;
+    /**
+     * Facilitates routing of packets to the appropriate handler
+     */
+    public final PacketRouter packetRouter = new PacketRouter();
+    /**
+     * Determines whether or not the current client is authenticated
+     */
     public boolean authenticated = false;
+    /**
+     * The authenticated user data
+     */
     public JSONObject user;
+    /**
+     * Determines whether or not the connection is over a websocket or TCP
+     */
     public boolean isWebsocket = false;
+    /**
+     * Determines whether or not this handler is actively managing a connection
+     */
     public boolean active = false;
 
     public ConnectionHandler(Socket client, IPacketHandler packetHandler) throws IOException {
         this.client = client;
         outStream = this.client.getOutputStream();
         inStream = this.client.getInputStream();
-        this.packetHandler = packetHandler;
 
         setDaemon(true);
         start();
     }
 
-    public ConnectionHandler(WebSocket client, WebSocketOutputStream os, WebSocketInputStream is, IPacketHandler packetHandler) throws IOException {
+    public ConnectionHandler(WebSocket client, WebSocketOutputStream os, WebSocketInputStream is) throws IOException {
         webClient = client;
-        this.packetHandler = packetHandler;
         this.outStream = os;
         this.inStream = is;
     }

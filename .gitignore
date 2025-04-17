@@ -5,6 +5,9 @@
 build
 
 app/Assets
+app/bin
+
+.idea
 .vscode
 
 log.txt

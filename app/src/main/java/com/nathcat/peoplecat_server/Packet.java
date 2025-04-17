@@ -5,7 +5,6 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.*;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -781,7 +780,7 @@ public class Packet {
         payload = new byte[length];
 
         try {
-            int res = inStream.read(payload);
+            inStream.read(payload);
 
         } catch (IOException e) {
             throw new RuntimeException(e);

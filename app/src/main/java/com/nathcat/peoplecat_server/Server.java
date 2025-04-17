@@ -1,16 +1,5 @@
 package com.nathcat.peoplecat_server;
 
-import com.mysql.cj.x.protobuf.MysqlxPrepare;
-import com.nathcat.peoplecat_database.Database;
-import com.nathcat.peoplecat_database.KeyManager;
-import nl.martijndwars.webpush.Notification;
-import nl.martijndwars.webpush.PushAsyncService;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.jose4j.lang.JoseException;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.ParseException;
-
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -18,14 +7,25 @@ import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.*;
-import java.security.spec.InvalidKeySpecException;
+import java.security.GeneralSecurityException;
+import java.security.PublicKey;
+import java.security.Security;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.jose4j.lang.JoseException;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
+
+import com.nathcat.peoplecat_database.Database;
+import com.nathcat.peoplecat_database.KeyManager;
+
+import nl.martijndwars.webpush.Notification;
+import nl.martijndwars.webpush.PushAsyncService;
 
 public class Server {
     public static class Options {
@@ -47,9 +47,14 @@ public class Server {
 
         /**
          * Create a new Handler cleaning thread
-         * @param livingHandlersMode Overrides the conditions which check if a handler's thread is actually running.
-         *                           Will be used mainly with the <code>WebSocketHandler</code> since this does not allow
-         *                           <code>ClientHandlers</code> to run in their own thread.
+         * 
+         * @param livingHandlersMode Overrides the conditions which check if a handler's
+         *                           thread is actually running.
+         *                           Will be used mainly with the
+         *                           <code>WebSocketHandler</code> since this does not
+         *                           allow
+         *                           <code>ClientHandlers</code> to run in their own
+         *                           thread.
          */
         public HandlerCleanerThread(boolean livingHandlersMode) {
             this.setDaemon(true);
@@ -57,7 +62,8 @@ public class Server {
         }
 
         /**
-         * Default constructor, sets <code>livingHandlerMode</code> to <code>true</code>.
+         * Default constructor, sets <code>livingHandlerMode</code> to
+         * <code>true</code>.
          */
         public HandlerCleanerThread() {
             this.setDaemon(true);
@@ -68,7 +74,8 @@ public class Server {
         public void run() {
             while (true) {
                 for (int i = 0; i < handlers.size(); i++) {
-                    if (!handlers.get(i).active || ((!handlers.get(i).isAlive() || handlers.get(i).isInterrupted()) && livingHandlersMode)) {
+                    if (!handlers.get(i).active || ((!handlers.get(i).isAlive() || handlers.get(i).isInterrupted())
+                            && livingHandlersMode)) {
                         handlers.remove(i);
                     }
                 }
@@ -98,16 +105,16 @@ public class Server {
     public HashMap<Integer, List<ClientHandler>> userToHandler = new HashMap<>();
     private Thread handlerCleaner;
 
-
-    public Server(Options options) throws NoSuchFieldException, IllegalAccessException, SQLException, IOException, ParseException {
+    public Server(Options options)
+            throws NoSuchFieldException, IllegalAccessException, SQLException, IOException, ParseException {
         // Set the options provided in the record
         for (Field field : Options.class.getFields()) {
             Server.class.getField(field.getName()).set(this, field.get(options));
         }
-        
+
         System.setOut(getLogStream());
         System.setErr(getLogStream());
-        
+
         db = new Database();
 
         Security.addProvider(new BouncyCastleProvider());
@@ -152,7 +159,8 @@ public class Server {
         return new Options(port, threadCount, useSSL, logFile);
     }
 
-    public static void main(String[] args) throws NoSuchFieldException, IllegalAccessException, SQLException, IOException, ParseException {
+    public static void main(String[] args)
+            throws NoSuchFieldException, IllegalAccessException, SQLException, IOException, ParseException {
         // Create the server instance from the options
         Server server = new Server(getOptions(args));
         server.start();
@@ -168,6 +176,7 @@ public class Server {
 
     /**
      * Starts the server
+     * 
      * @throws IOException thrown by failing I/O operations
      */
     public void start() throws IOException {
@@ -179,7 +188,8 @@ public class Server {
 
         log("Starting up...");
 
-        // This is a small worker thread which cleans the handler array by removing inactive handlers.
+        // This is a small worker thread which cleans the handler array by removing
+        // inactive handlers.
         Thread cleanerThread = new HandlerCleanerThread();
         cleanerThread.start();
 
@@ -187,21 +197,28 @@ public class Server {
 
         log("Ready.");
 
-        while (true) {
-            // Accept a connection and pass it to a new handler thread
-            Socket client = ss.accept();
+        try {
+            while (true) {
+                // Accept a connection and pass it to a new handler thread
+                Socket client = ss.accept();
 
-            // Check if the server is allowed to accept any more connections
-            if (handlers.size() >= threadCount) {
-                OutputStream os = client.getOutputStream();
-                os.write(Packet.createError("Server full", "The server cannot currently accept any more connections.").getBytes());
-                os.flush();
-                client.close();
-                continue;
+                // Check if the server is allowed to accept any more connections
+                if (handlers.size() >= threadCount) {
+                    OutputStream os = client.getOutputStream();
+                    os.write(Packet
+                            .createError("Server full", "The server cannot currently accept any more connections.")
+                            .getBytes());
+                    os.flush();
+                    client.close();
+                    continue;
+                }
+
+                ClientHandler handler = new ClientHandler(this, client);
+                handlers.add(handler);
             }
-
-            ClientHandler handler = new ClientHandler(this, client);
-            handlers.add(handler);
+        } catch (Exception e) {
+            ss.close();
+            // Should never reach here! Mainly for the compilers benefit :3
         }
     }
 
@@ -220,7 +237,8 @@ public class Server {
 
     /**
      * Send a push notification to the given user
-     * @param userId The user ID
+     * 
+     * @param userId  The user ID
      * @param content The content of the push notification
      */
     public void sendPushNotification(int userId, JSONObject content) {
@@ -235,12 +253,12 @@ public class Server {
                         (String) results[i].get("endpoint"),
                         (String) results[i].get("key"),
                         (String) results[i].get("auth"),
-                        content.toJSONString()
-                ));
+                        content.toJSONString()));
             }
-        }
-        catch (SQLException | JoseException | GeneralSecurityException | IOException e) {
-            log("\033[91;3mAn error occurred when sending push notifications to user " + userId + ": " + e.getClass().getName() + " " + e.getMessage() + "\n" + stringifyStackTrace(e.getStackTrace()) + "\033[0m");
+        } catch (SQLException | JoseException | GeneralSecurityException | IOException e) {
+            log("\033[91;3mAn error occurred when sending push notifications to user " + userId + ": "
+                    + e.getClass().getName() + " " + e.getMessage() + "\n" + stringifyStackTrace(e.getStackTrace())
+                    + "\033[0m");
         }
     }
 

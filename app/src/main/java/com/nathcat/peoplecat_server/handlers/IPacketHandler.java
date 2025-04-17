@@ -12,5 +12,5 @@ public interface IPacketHandler {
      * @param packets The packet sequence to handle
      * @return The packet sequence to reply with
      */
-    public Packet[] handle(Packet[] packets);
+    public Packet[] handle(com.nathcat.peoplecat_server.Server server, com.nathcat.peoplecat_server.ConnectionHandler handler, Packet[] packets);
 }

@@ -1,12 +1,9 @@
 package com.nathcat.peoplecat_server;
 
-import org.java_websocket.WebSocket;
-import org.json.simple.JSONObject;
-
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.security.SecureRandom;
+
+import org.java_websocket.WebSocket;
 
 /**
  * Allows output of a packet through a websocket
@@ -17,21 +14,6 @@ public class WebSocketOutputStream extends OutputStream {
 
     public WebSocketOutputStream(WebSocket socket) {
         this.socket = socket;
-    }
-
-    /**
-     * Transform a packet into a websocket fragment message buffer.
-     * @param packet The packet to transform
-     * @return A byte array containing the fragment data to be sent through the websocket.
-     */
-    private static byte[] createMessageBuffer(Packet packet) {
-        JSONObject packetData = packet.getData();
-        if (packetData == null) packetData = new JSONObject();
-        packetData.put("type", packet.type);
-        packetData.put("isFinal", packet.isFinal ? 1 : 0);
-
-        SecureRandom rng = new SecureRandom();
-        return packetData.toJSONString().getBytes();
     }
 
     @Override
