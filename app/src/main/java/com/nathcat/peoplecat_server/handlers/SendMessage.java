@@ -31,6 +31,10 @@ public class SendMessage implements IPacketHandler {
         Message msg = new Message((int) handler.user.get("id"), Math.toIntExact((long) request.get("chatId")),
                 (long) request.get("timeSent"), request.get("content"));
 
+        if (!server.db.isMemberOfChat((int) handler.user.get("id"), msg.ChatID))
+            return new Packet[] { Packet.createError("Not member of chat",
+                    "You are not a member of this chat!") };
+
         try {
             Message[] messages = MessageBox.openMessageBox(msg.ChatID);
             Message[] newMessages = new Message[messages.length + 1];
