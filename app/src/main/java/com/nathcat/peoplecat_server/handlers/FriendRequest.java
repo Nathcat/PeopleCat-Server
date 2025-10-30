@@ -3,12 +3,15 @@ package com.nathcat.peoplecat_server.handlers;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
+import java.util.List;
+
 import org.json.simple.JSONObject;
 
 import com.nathcat.peoplecat_database.Database;
 import com.nathcat.peoplecat_server.ConnectionHandler;
 import com.nathcat.peoplecat_server.Packet;
 import com.nathcat.peoplecat_server.Server;
+import com.nathcat.peoplecat_server.ClientHandler;
 
 public class FriendRequest implements IPacketHandler {
 
@@ -126,7 +129,7 @@ public class FriendRequest implements IPacketHandler {
                 PreparedStatement stmt = server.db.getPreparedStatement("SELECT * FROM FriendRequests WHERE id = ?");
                 stmt.setInt(1, (int) data.get("id"));
                 stmt.execute();
-                JSONObject[] r = stmt.getResultSet();
+                JSONObject[] r = Database.extractResultSet(stmt.getResultSet());
 
                 if (r.length == 0) {
                     return new Packet[] { Packet.createError("Friend Request Not Found", "The specified friend request does not exist.") };
@@ -134,7 +137,7 @@ public class FriendRequest implements IPacketHandler {
 
                 friendRequest = r[0];
 
-                PreparedStatement stmt = server.db
+                stmt = server.db
                         .getPreparedStatement("DELETE FROM FriendRequests WHERE id = ?");
                 stmt.setInt(1, (int) data.get("id"));
                 stmt.executeUpdate();
@@ -182,8 +185,8 @@ public class FriendRequest implements IPacketHandler {
             List<ClientHandler> sender = server.userToHandler.get((int) notification.get("sender"));
             List<ClientHandler> recipient = server.userToHandler.get((int) notification.get("recipient"));
 
-            if (sender != null) sender.forEach((v) => v.writePacket(n));
-            if (recipient != null) recipient.forEach((v) => v.writePacket(n));
+            if (sender != null) sender.forEach((v) -> v.writePacket(n));
+            if (recipient != null) recipient.forEach((v) -> v.writePacket(n));
         }
 
         return response;

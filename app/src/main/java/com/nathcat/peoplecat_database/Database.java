@@ -186,12 +186,16 @@ public class Database {
      * @return T/F, indicating whether or not a there is a membership record for the specified user and chat
      */
     public boolean isMemberOfChat(int userId, int chatId) {
-        PreparedStatement ps = getPreparedStatement("SELECT count(*) AS 'memCount' FROM ChatMemberships WHERE `user` = ? AND `ChatID` = ?");
-        ps.setInt(1, userId);
-        ps.setInt(2, chatId);
-        ps.execute();
+        try {
+            PreparedStatement ps = getPreparedStatement("SELECT count(*) AS 'memCount' FROM ChatMemberships WHERE `user` = ? AND `ChatID` = ?");
+            ps.setInt(1, userId);
+            ps.setInt(2, chatId);
+            ps.execute();
 
-        JSONObject res = extractResultSet(ps.getResultSet())[0];  // Will only ever be one result since we are using an aggregate function in the query
-        return res.get("memCount") != 0;    
+            JSONObject res = extractResultSet(ps.getResultSet())[0];  // Will only ever be one result since we are using an aggregate function in the query
+            return ((int) res.get("memCount")) != 0;    
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
