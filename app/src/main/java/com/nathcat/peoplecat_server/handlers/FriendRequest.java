@@ -25,6 +25,10 @@ public class FriendRequest implements IPacketHandler {
         String action = (String) data.get("action");
         Packet[] response;
 
+        JSONObject notification = new JSONObject();
+        int frId;
+        JSONObject friendRequest = new JSONObject();
+
         if (action.contentEquals("SEND")) {
             if (!data.containsKey("recipient")) {
                 return new Packet[] { Packet.createError("Invalid request",
@@ -32,6 +36,9 @@ public class FriendRequest implements IPacketHandler {
             }
 
             try {
+                // Set notification event
+                notification.put("event", "SENT");
+                
                 PreparedStatement stmt = server.db
                         .getPreparedStatement("INSERT INTO FriendRequests (sender, recipient) values (?, ?)");
                 stmt.setInt(1, (int) handler.user.get("id"));
@@ -40,7 +47,7 @@ public class FriendRequest implements IPacketHandler {
                 stmt.close();
 
                 stmt = server.db.getPreparedStatement(
-                        "SELECT id FROM FriendRequests WHERE sender = ? AND recipient = ?");
+                        "SELECT * FROM FriendRequests WHERE sender = ? AND recipient = ?");
                 stmt.setInt(1, (int) handler.user.get("id"));
                 stmt.setInt(2, (int) data.get("recipient"));
                 stmt.execute();
@@ -48,11 +55,14 @@ public class FriendRequest implements IPacketHandler {
                 JSONObject[] r = Database.extractResultSet(stmt.getResultSet());
                 stmt.close();
 
+                // Set friend request data
+                friendRequest = r[0];
+
                 response = new Packet[] { Packet.createPacket(Packet.TYPE_FRIEND_REQUEST, true, r[0]) };
             } catch (SQLException e) {
                 handler.log("\033[91;3mSQL error! " + e.getMessage() + "\033[0m");
                 return new Packet[] { Packet.createError("Database error", e.getMessage()) };
-            }
+            } 
         } else if (action.contentEquals("ACCEPT")) {
             if (!data.containsKey("id")) {
                 return new Packet[] {
@@ -60,6 +70,10 @@ public class FriendRequest implements IPacketHandler {
             }
 
             try {
+                // Set notification event and recipient
+                notification.put("event", "ACCEPTED");
+                friendRequest.put("recipient", handler.user.get("id"));
+
                 PreparedStatement stmt = server.db
                         .getPreparedStatement("SELECT sender FROM FriendRequests WHERE id = ?");
                 stmt.setInt(1, (int) data.get("id"));
@@ -74,6 +88,10 @@ public class FriendRequest implements IPacketHandler {
                 }
 
                 stmt.close();
+
+                // Set notification sender and ID
+                friendRequest.put("sender", sender);
+                friendRequest.put("id", data.get("id"));
 
                 stmt = server.db
                         .getPreparedStatement("INSERT INTO Friends (id, follower) values (?, ?), (?, ?)");
@@ -101,6 +119,21 @@ public class FriendRequest implements IPacketHandler {
             }
 
             try {
+                // Set notification event
+                notification.put("event", "DECLINED");
+
+                // Get friend request information
+                PreparedStatement stmt = server.db.getPreparedStatement("SELECT * FROM FriendRequests WHERE id = ?");
+                stmt.setInt(1, (int) data.get("id"));
+                stmt.execute();
+                JSONObject[] r = stmt.getResultSet();
+
+                if (r.length == 0) {
+                    return new Packet[] { Packet.createError("Friend Request Not Found", "The specified friend request does not exist.") };
+                }
+
+                friendRequest = r[0];
+
                 PreparedStatement stmt = server.db
                         .getPreparedStatement("DELETE FROM FriendRequests WHERE id = ?");
                 stmt.setInt(1, (int) data.get("id"));
@@ -136,6 +169,21 @@ public class FriendRequest implements IPacketHandler {
         } else {
             response = new Packet[] { Packet.createError("Unrecognised friend request action",
                     "The action \"" + action + "\" is not recognised.") };
+        }
+
+        if (action.contentEquals("SEND") || action.contentEquals("ACCEPT") || action.contentEquals("DECLINE")) {
+            notification.put("friendRequest", friendRequest);
+            Packet n = Packet.createPacket(
+                Packet.TYPE_NOTIFICATION_FRIEND_REQUEST,
+                true,
+                notification
+            );
+
+            List<ClientHandler> sender = server.userToHandler.get((int) notification.get("sender"));
+            List<ClientHandler> recipient = server.userToHandler.get((int) notification.get("recipient"));
+
+            if (sender != null) sender.forEach((v) => v.writePacket(n));
+            if (recipient != null) recipient.forEach((v) => v.writePacket(n));
         }
 
         return response;

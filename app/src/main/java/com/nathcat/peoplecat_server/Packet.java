@@ -756,6 +756,32 @@ public class Packet {
      */
     public static final int TYPE_PUSH_UNSUBSCRIBE = 23;
 
+    /**
+     * <h3>Purpose</h3>
+     * <p>
+     *      Notifies a client of an event involving a friend request they are referenced in, either as the sender or receiver.
+     * </p>
+     * <p>
+     *      Note that as with other notification packets, this should not be sent from the client to the server, only server to client.
+     * </p> 
+     * <h3>Payload format</h3>
+     * <pre>
+     *      {
+     *          "event": "SENT", "ACCEPTED", "DECLINED"
+     *          "friendRequest": {
+     *              "id": Integer,
+     *              "sender": Integer
+     *              "recipient": Integer 
+     *          }
+     *      }
+     * </pre>
+     * <h3>Response format</h3>
+     * <p>
+     *      Clients should not reply to this packet type.
+     * </p>
+     */
+    public static final int TYPE_NOTIFICATION_FRIEND_REQUEST = 24;
+
 
     /**
      * The type of request specified by the packet
