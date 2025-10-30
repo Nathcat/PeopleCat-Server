@@ -31,6 +31,11 @@ public class GetMessageQueue implements IPacketHandler {
         }
 
         int chatId = Math.toIntExact((long) request.get("chatId"));
+
+        if (!server.db.isMemberOfChat((int) handler.user.get("id"), chatId))
+            return new Packet[] { Packet.createError("Not member of chat",
+                    "You are not a member of this chat!") };
+
         Message[] messages;
         try {
             messages = MessageBox.openMessageBox(chatId);
