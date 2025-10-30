@@ -3,15 +3,14 @@ package com.nathcat.peoplecat_server.ssl;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.security.cert.Certificate;
 import java.security.KeyFactory;
 import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.security.cert.CertificateException;
-import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Arrays;
@@ -19,9 +18,8 @@ import java.util.Base64;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
-import org.json.simple.JSONObject;
 
-import com.nathcat.peoplecat_database.KeyManager;
+import org.json.simple.JSONObject;
 
 /**
  * Provide SSLContext from a Let's Encrypt certificate chain

@@ -1,17 +1,16 @@
 package com.nathcat.AuthCat;
 
-import com.nathcat.AuthCat.Exceptions.InvalidResponse;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
-
 import java.io.IOException;
-import java.net.Authenticator;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Duration;
+
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
+import com.nathcat.AuthCat.Exceptions.InvalidResponse;
 
 /**
  * <p>An integration for making requests to the AuthCat service.</p>
@@ -24,14 +23,6 @@ import java.time.Duration;
  * @see <a href="https://data.nathcat.net/sso">AuthCat</a>
  */
 public class AuthCat {
-
-    private static HttpClient makeClient() {
-        return HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_1_1)
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .authenticator(null)
-                .build();
-    }
 
     private static HttpResponse<String> sendRequest(String uri, JSONObject body) throws IOException, InterruptedException {
         HttpClient client = HttpClient.newHttpClient();

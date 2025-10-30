@@ -1,30 +1,32 @@
 package com.nathcat.peoplecat_database;
 
-import com.nathcat.peoplecat_server.Packet;
-import com.sun.tools.javac.Main;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
+
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.crypto.params.ECPrivateKeyParameters;
 import org.bouncycastle.crypto.params.ECPublicKeyParameters;
 import org.bouncycastle.crypto.util.PrivateKeyFactory;
 import org.bouncycastle.crypto.util.PublicKeyFactory;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.spec.ECParameterSpec;
 import org.bouncycastle.jce.spec.ECPrivateKeySpec;
 import org.bouncycastle.jce.spec.ECPublicKeySpec;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
-import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.security.*;
-import java.security.spec.InvalidKeySpecException;
-import java.util.Arrays;
-import java.util.Objects;
+import com.nathcat.peoplecat_server.Packet;
 
 /**
  * Utility class for managing encryption keys
@@ -189,6 +191,7 @@ public class KeyManager {
         InputStreamReader isr = new InputStreamReader(new FileInputStream(path));
         PEMParser parser = new PEMParser(isr);
         PEMKeyPair kp = (PEMKeyPair) parser.readObject();
+        parser.close();
         ECPrivateKeyParameters privateInfo = (ECPrivateKeyParameters) PrivateKeyFactory.createKey(kp.getPrivateKeyInfo());
 
         KeyFactory keyFactory = null;
@@ -219,6 +222,7 @@ public class KeyManager {
         SubjectPublicKeyInfo obj = null;
         try {
             obj = (SubjectPublicKeyInfo) parser.readObject();
+            parser.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

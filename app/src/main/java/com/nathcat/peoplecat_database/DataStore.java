@@ -18,6 +18,7 @@ public class DataStore<K, V> {
         try {
             ObjectInputStream ois = new ObjectInputStream(new FileInputStream(this.dataPath));
             content = (HashMap<K, V>) ois.readObject();
+            ois.close();
 
         } catch (FileNotFoundException e) {
             content = new HashMap<>();

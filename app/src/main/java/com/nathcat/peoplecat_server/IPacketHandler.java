@@ -223,14 +223,12 @@ public interface IPacketHandler {
             case Packet.TYPE_ERROR -> error(handler, packets);
             case Packet.TYPE_PING -> ping(handler, packets);
             case Packet.TYPE_AUTHENTICATE -> authenticate(handler, packets);
-            case Packet.TYPE_CREATE_NEW_USER -> createNewUser(handler, packets);
             case Packet.TYPE_CLOSE -> close(handler, packets);
             case Packet.TYPE_GET_USER -> getUser(handler, packets);
             case Packet.TYPE_GET_MESSAGE_QUEUE -> getMessageQueue(handler, packets);
             case Packet.TYPE_SEND_MESSAGE -> sendMessage(handler, packets);
             case Packet.TYPE_NOTIFICATION_MESSAGE -> notificationMessage(handler, packets);
             case Packet.TYPE_JOIN_CHAT -> joinChat(handler, packets);
-            case Packet.TYPE_CHANGE_PFP_PATH -> changeProfilePicture(handler, packets);
             case Packet.TYPE_GET_ACTIVE_USER_COUNT -> getActiveUserCount(handler, packets);
             case Packet.TYPE_NOTIFICATION_USER_ONLINE -> notificationUserOnline(handler, packets);
             case Packet.TYPE_NOTIFICATION_USER_OFFLINE -> notificationUserOffline(handler, packets);

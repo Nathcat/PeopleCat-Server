@@ -1,10 +1,25 @@
 package com.nathcat.peoplecat_server;
 
-import com.mysql.cj.xdevapi.Client;
-import com.nathcat.peoplecat_server.ssl.SSLProviderFactory;
+import static com.nathcat.peoplecat_server.Server.log;
 
-import nl.altindag.ssl.SSLFactory;
-import nl.altindag.ssl.pem.util.PemUtils;
+import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+
+import javax.net.ssl.SSLContext;
+
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
@@ -14,19 +29,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import javax.net.ssl.*;
-import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.security.*;
-import java.security.cert.CertificateException;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
+import com.nathcat.peoplecat_server.ssl.SSLProviderFactory;
 
 /**
  * Acts as an alternative to the Server class. This class uses websockets to handle connections to clients, where the
@@ -66,7 +69,7 @@ public class WebSocketHandler extends WebSocketServer {
         }
         else {
             webSocketHandler.setWebSocketFactory(new DefaultWebSocketServerFactory());
-            webSocketHandler.server.log("\033[33;3mRunning in no-SSL mode!\033[0m");
+            log("\033[33;3mRunning in no-SSL mode!\033[0m");
         }
 
         webSocketHandler.start();
@@ -81,16 +84,16 @@ public class WebSocketHandler extends WebSocketServer {
 
     @Override
     public void onOpen(org.java_websocket.WebSocket webSocket, ClientHandshake clientHandshake) {
-        server.log("Connection received");
+        Server.log("Connection received");
 
         // If the server is full close the connection
         if (server.handlers.size() >= server.threadCount) {
-            server.log("Server is full, rejecting connection");
+            Server.log("Server is full, rejecting connection");
             webSocket.send("Server is full!");
             webSocket.close();
         }
         else {  // ... otherwise link the connection to a new client handler
-            server.log("Trying to accept connection");
+            Server.log("Trying to accept connection");
             try {
                 ClientHandler h = new ClientHandler(server, webSocket, new WebSocketOutputStream(webSocket), new WebSocketInputStream(webSocket));
                 sockHandlerMap.put(webSocket, h);
@@ -100,7 +103,7 @@ public class WebSocketHandler extends WebSocketServer {
                 throw new RuntimeException(e);
             }
 
-            server.log("Accepted connection into handler");
+            Server.log("Accepted connection into handler");
         }
     }
 
@@ -182,7 +185,7 @@ Developed by Nathcat 2024""");
                     packetList.add(is.getNextPacket());
                 }
 
-                Packet[] response = h.packetHandler.handle(h, packetList.toArray(new Packet[0]));
+                Packet[] response = h.packetRouter.handlePacketSequence(server, h, packetList.toArray(new Packet[0]));
                 ((WebSocketOutputStream) h.outStream).write(response);
                 h.log("Written response: " + Arrays.toString(response));
             }

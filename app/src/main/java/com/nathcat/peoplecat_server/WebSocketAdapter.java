@@ -1,9 +1,5 @@
 package com.nathcat.peoplecat_server;
 
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -12,12 +8,15 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 /**
  * This is a utility class which allows the server to handle websocket connections for web based implementations
@@ -265,6 +264,7 @@ public class WebSocketAdapter {
         InputStream in = socket.getInputStream();
         Scanner s = new Scanner(in, StandardCharsets.UTF_8);
         String data = s.useDelimiter("\\r\\n\\r\\n").next();
+        s.close();
         if (data.contentEquals("Not websock")) return false;
         Matcher get = Pattern.compile("^GET").matcher(data);
 
@@ -309,7 +309,6 @@ public class WebSocketAdapter {
         packetData.put("type", packet.type);
         packetData.put("isFinal", packet.isFinal ? 1 : 0);
 
-        SecureRandom rng = new SecureRandom();
         return Fragment.FromData(packetData.toJSONString(), null/*rng.generateSeed(4)*/);
     }
 
