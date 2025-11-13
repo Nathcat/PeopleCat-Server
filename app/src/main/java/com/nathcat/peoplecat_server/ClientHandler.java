@@ -11,24 +11,7 @@ import org.java_websocket.WebSocket;
 import org.json.simple.JSONObject;
 
 import com.nathcat.peoplecat_database.Database;
-import com.nathcat.peoplecat_server.handlers.AddToChat;
-import com.nathcat.peoplecat_server.handlers.Authenticate;
-import com.nathcat.peoplecat_server.handlers.Close;
-import com.nathcat.peoplecat_server.handlers.CreateChat;
-import com.nathcat.peoplecat_server.handlers.FriendRequest;
-import com.nathcat.peoplecat_server.handlers.GetActiveUserCount;
-import com.nathcat.peoplecat_server.handlers.GetChatMemberships;
-import com.nathcat.peoplecat_server.handlers.GetFriends;
-import com.nathcat.peoplecat_server.handlers.GetMessageQueue;
-import com.nathcat.peoplecat_server.handlers.GetServerInfo;
-import com.nathcat.peoplecat_server.handlers.GetUser;
-import com.nathcat.peoplecat_server.handlers.GetUserKey;
-import com.nathcat.peoplecat_server.handlers.InitUserKey;
-import com.nathcat.peoplecat_server.handlers.JoinChat;
-import com.nathcat.peoplecat_server.handlers.Ping;
-import com.nathcat.peoplecat_server.handlers.PushSubscribe;
-import com.nathcat.peoplecat_server.handlers.PushUnsubscribe;
-import com.nathcat.peoplecat_server.handlers.SendMessage;
+import com.nathcat.peoplecat_server.handlers.*;
 
 /**
  * Handles a connection to a client application.
@@ -76,6 +59,7 @@ public class ClientHandler extends ConnectionHandler {
         packetRouter.register(Packet.TYPE_PUSH_SUBSCRIBE, new PushSubscribe());
         packetRouter.register(Packet.TYPE_PUSH_UNSUBSCRIBE, new PushUnsubscribe());
         packetRouter.register(Packet.TYPE_SEND_MESSAGE, new SendMessage());
+        packetRouter.register(Packet.TYPE_GET_CHAT_MEMBERS, new GetChatMembers());
     }
 
     @Override

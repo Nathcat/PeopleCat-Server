@@ -129,8 +129,8 @@ public class ConnectionHandler extends Thread {
     public boolean equals(Object obj) {
         return obj.getClass() == ConnectionHandler.class && ((ConnectionHandler) obj).threadId() == this.threadId();
     }
-
-    public long threadId() {
+    
+    /*public long threadId() {
         return this.getId();
-    }
+    }*/
 }

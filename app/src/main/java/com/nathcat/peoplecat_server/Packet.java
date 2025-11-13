@@ -782,6 +782,31 @@ public class Packet {
      */
     public static final int TYPE_NOTIFICATION_FRIEND_REQUEST = 24;
 
+    /**
+     * <h3>Purpose</h3>
+     * <p>
+     *      Gets a list of users who are a member of a specified chat.
+     *      You must be a member of the chat in order to make this request.
+     * </p>
+     * <h3>Payload format</h3>
+     * <pre>
+     *      {
+     *          "chatId": Integer
+     *      }
+     * </pre>
+     * <h3>Response format</h3>
+     * <p>
+     *      The server will reply with a sequence of packets, each containing the user ID of a member in the following format,
+     *      <b>excluding the currently authenticated user</b>.
+     * </p>
+     * <pre>
+     *      {
+     *          "id": Integer
+     *      }
+     * </pre>
+     */
+    public static final int TYPE_GET_CHAT_MEMBERS = 25;
+
 
     /**
      * The type of request specified by the packet
