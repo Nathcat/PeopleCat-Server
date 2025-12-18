@@ -4,10 +4,11 @@
 # Ignore Gradle build output directory
 build
 
-app/Assets
-app/bin
-
-.idea
+.kotlin
 .vscode
 
-log.txt
+.settings
+.classpath
+.project
+kls_database.db
+bin

@@ -47,9 +47,10 @@ import java.util.Random;
  * </p>
  */
 public abstract class Packet {
-  public final int id;
+  protected int id;
   public final Type type;
-  public final boolean isFinal;
+  protected boolean isFinal;
+  protected PacketBody body;
 
   /**
    * Construct a new packet
@@ -100,6 +101,10 @@ public abstract class Packet {
     this.isFinal = true;
   }
 
+  public boolean isFinal() {
+    return isFinal;
+  }
+
   /**
    * Get this packet's encoded byte stream
    */
@@ -110,7 +115,12 @@ public abstract class Packet {
       dos.writeInt(id);
       dos.writeInt(type.typeId);
       dos.writeBoolean(isFinal);
-      dos.writeInt(length());
+      if (body != null) {
+        dos.writeInt(body.length());
+        dos.write(body.toBytes());
+      } else {
+        dos.writeInt(0);
+      }
     } catch (IOException e) {
       // This shouldn't happen
       throw new RuntimeException(e);
@@ -126,12 +136,5 @@ public abstract class Packet {
    */
   public byte[] getBytes() {
     return getByteStream().toByteArray();
-  }
-
-  /**
-   * Get the length of this packet's payload
-   */
-  public int length() {
-    return 0;
   }
 }
