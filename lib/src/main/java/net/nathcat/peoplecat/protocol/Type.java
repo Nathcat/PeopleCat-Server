@@ -1,10 +1,12 @@
 package net.nathcat.peoplecat.protocol;
 
 public enum Type {
-  Ping(0),
-  Close(1),
-  Error(2),
-  Auth(3);
+  Ping(1),
+  Close(4),
+  Error(0),
+  Auth(2),
+  AddToChat(21),
+  Success(24);
 
   public final int typeId;
 
