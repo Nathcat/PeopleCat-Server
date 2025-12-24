@@ -5,7 +5,7 @@ import net.nathcat.peoplecat.protocol.PacketBody;
 import net.nathcat.peoplecat.protocol.ProtocolError;
 import net.nathcat.peoplecat.protocol.Type;
 
-public class ErrorPacket extends Packet {
+public class ErrorPacket extends Packet<ErrorPacket.Body> {
   public static class Body extends PacketBody {
     public final String name;
     public final String message;

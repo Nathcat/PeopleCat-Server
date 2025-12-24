@@ -4,7 +4,7 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class PacketStream<P extends Packet> {
+public final class PacketStream<P extends Packet<? extends PacketBody>> {
   private final List<P> packets = new ArrayList<>();
   private final Class<P> c;
   private final int id;

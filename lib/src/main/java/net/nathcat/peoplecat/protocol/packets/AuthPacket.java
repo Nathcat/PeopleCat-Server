@@ -5,7 +5,7 @@ import net.nathcat.peoplecat.protocol.Packet;
 import net.nathcat.peoplecat.protocol.PacketBody;
 import net.nathcat.peoplecat.protocol.Type;
 
-public class AuthPacket extends Packet {
+public class AuthPacket extends Packet<AuthPacket.Body> {
   public static class Body extends PacketBody {
     public String username;
     public String password;

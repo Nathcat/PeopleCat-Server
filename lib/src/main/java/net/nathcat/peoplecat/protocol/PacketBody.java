@@ -7,6 +7,9 @@ import com.google.gson.Gson;
  *
  */
 public abstract class PacketBody {
+  public static class Empty extends PacketBody {
+  }
+
   /**
    * Encode this class to a JSON string byte array
    *

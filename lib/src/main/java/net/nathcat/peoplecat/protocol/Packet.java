@@ -46,7 +46,7 @@ import java.util.Random;
  * type of packet.
  * </p>
  */
-public abstract class Packet {
+public abstract class Packet<BodyType extends PacketBody> {
   protected int id;
   public final Type type;
   protected boolean isFinal;
@@ -136,5 +136,13 @@ public abstract class Packet {
    */
   public byte[] getBytes() {
     return getByteStream().toByteArray();
+  }
+
+  /**
+   * Get the body of this packet
+   */
+  @SuppressWarnings("unchecked")
+  public BodyType getBody() {
+    return (BodyType) body;
   }
 }

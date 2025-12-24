@@ -9,6 +9,8 @@ plugins {
 dependencies {
     implementation("org.apache.commons:commons-text")
     implementation(project(":lib"))
+    implementation(files("libs/AuthCat-Java.jar"))
+    implementation(files("libs/Java-WebSocket-1.5.7.jar"))
 }
 
 application {
