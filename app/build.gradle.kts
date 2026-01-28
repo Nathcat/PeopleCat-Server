@@ -7,10 +7,16 @@ plugins {
 }
 
 dependencies {
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.1")
+
     implementation("org.apache.commons:commons-text")
     implementation(project(":lib"))
     implementation(files("libs/AuthCat-Java.jar"))
     implementation(files("libs/Java-WebSocket-1.5.7.jar"))
+    implementation(files("libs/json-simple-1.1.1.jar"))
+
+    // Source: https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+    implementation("org.slf4j:slf4j-api:2.0.17")
 }
 
 application {

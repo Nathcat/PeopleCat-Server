@@ -11,5 +11,6 @@ public abstract class PacketHandler<P extends Packet<? extends PacketBody>> {
    * @param packets The stream of packets which were received.
    * @return The stream of packets to be sent back to the client
    */
-  abstract public PacketStream<? extends Packet<? extends PacketBody>> handle(PacketStream<P> packets);
+  abstract public PacketStream<? extends Packet<? extends PacketBody>> handle(PacketStream<P> packets,
+      ConnectionState state);
 }

@@ -7,6 +7,8 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+import org.json.simple.JSONObject;
+
 import net.nathcat.peoplecat.database.types.DBType;
 
 /**
@@ -41,5 +43,23 @@ public final class Utils {
     }
 
     return l.toArray((T[]) Array.newInstance(tC, 0));
+  }
+
+  /**
+   * Create a {@link DBType} object from a {@link JSONObject}.
+   *
+   * @param json The {@link JSONObject} to source data from
+   * @param tC   The {@link DBType}
+   * @return The resulting {@link DBType}.
+   */
+  public static <T extends DBType> T typeFromJson(JSONObject json, Class<T> tC) throws InstantiationException,
+      IllegalAccessException, InvocationTargetException, NoSuchFieldException, NoSuchMethodException {
+    T res = tC.getConstructor().newInstance();
+
+    for (Object key : json.keySet()) {
+      tC.getField((String) key).set(res, json.get(key));
+    }
+
+    return res;
   }
 }

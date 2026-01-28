@@ -1,7 +1,8 @@
 package net.nathcat.peoplecat_server;
 
 public class Main {
-	public static void main(String[] args) {
-		System.out.println("Hello world");
-	}
+  public static void main(String[] args) {
+    Server server = new Server(1234);
+    server.start();
+  }
 }

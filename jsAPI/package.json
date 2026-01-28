@@ -1,0 +1,24 @@
+{
+  "name": "peoplecat-jsapi",
+  "version": "1.0.0",
+  "description": "",
+  "main": "test.js",
+  "scripts": {
+    "build": "mkdir -p build && rm build/* && tsc",
+    "test": "chmod +x build/test.js && node build/test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nathcat/PeopleCat-Server.git"
+  },
+  "author": "Nathcat",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/Nathcat/PeopleCat-Server/issues"
+  },
+  "homepage": "https://github.com/Nathcat/PeopleCat-Server#readme",
+  "dependencies": {
+    "isomorphic-ws": "^5.0.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -7,7 +7,7 @@ import java.util.List;
 public final class PacketStream<P extends Packet<? extends PacketBody>> {
   private final List<P> packets = new ArrayList<>();
   private final Class<P> c;
-  private final int id;
+  public final int id;
 
   /**
    * Create an empty packet stream.
@@ -49,5 +49,13 @@ public final class PacketStream<P extends Packet<? extends PacketBody>> {
   public void add(P p) {
     p.id = id;
     packets.add(p);
+  }
+
+  public int length() {
+    return packets.size();
+  }
+
+  public P get(int index) {
+    return packets.get(index);
   }
 }
